@@ -1,0 +1,43 @@
+{
+  "name": "@stackbit/unibit",
+  "version": "0.1.5",
+  "description": "Stackbit's static site generator powered by Nunjucks templating language",
+  "main": "dist/unibit.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stackbithq/unibit.git"
+  },
+  "keywords": [
+    "stackbit",
+    "unibit"
+  ],
+  "author": "",
+  "license": "MIT",
+  "homepage": "https://github.com/stackbithq/unibit#readme",
+  "bugs": {
+    "url": "https://github.com/stackbithq/unibit/issues"
+  },
+  "bin": {
+    "unibit": "dist/unibit.js"
+  },
+  "dependencies": {
+    "@hapi/joi": "^15.0.3",
+    "@iarna/toml": "^2.2.3",
+    "chalk": "^2.4.2",
+    "figures": "^3.0.0",
+    "fs-extra": "^6.0.1",
+    "js-yaml": "^3.12.0",
+    "lodash": "^4.17.10",
+    "marked": "^0.6.1",
+    "micromatch": "^3.1.10",
+    "moment": "^2.22.2",
+    "node-sass": "^4.9.2",
+    "nunjucks": "^3.1.3",
+    "prettier": "^1.16.1",
+    "strftime": "^0.10.0",
+    "yargs": "^12.0.1"
+  }
+}
