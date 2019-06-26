@@ -135,7 +135,9 @@ function () {
     this.inputDir = _lodash.default.get(options, 'inputDir');
     this.assert(this.inputDir, "options.inputDir must be specified");
     this.assert(_fs.default.existsSync(_path.default.resolve(this.inputDir)), "input directory '".concat(this.inputDir, "' does not exist"));
-    var stackbitYamlPath = this.getStackbitYamlPath();
+
+    var stackbitYamlPath = _utils.default.getFirstExistingFileSync(_consts.default.STACKBIT_YAML_NAMES, this.inputDir);
+
     this.stackbitYamlFileName = _path.default.basename(stackbitYamlPath);
     this.stackbitYaml = this.loadStackbitYaml(stackbitYamlPath);
     options = _lodash.default.assign({}, _lodash.default.cloneDeep(this.ssgConsts()), _lodash.default.pick(this.stackbitYaml, ['ssgName', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'pageTemplateKey', 'templatesDir', 'componentsDir']), options);
@@ -199,7 +201,6 @@ function () {
         components: this.loadComponents(),
         pageTree: this.loadPages()
       };
-      data.pages = this.flattenPageTree(data.pageTree);
 
       var _this$createMenus = this.createMenus(data),
           menus = _this$createMenus.menus,
@@ -227,17 +228,6 @@ function () {
         relPath: this.configFilePath,
         data: _utils.default.parseFileSync(absPath)
       };
-    }
-  }, {
-    key: "getStackbitYamlPath",
-    value: function getStackbitYamlPath() {
-      var _this = this;
-
-      return _lodash.default.chain(_consts.default.STACKBIT_YAML_NAMES).map(function (filePath) {
-        return _path.default.resolve(_this.inputDir, filePath);
-      }).find(function (filePath) {
-        return _fs.default.existsSync(filePath);
-      }).value();
     }
   }, {
     key: "loadStackbitYaml",
@@ -296,7 +286,7 @@ function () {
   }, {
     key: "loadFiles",
     value: function loadFiles(dirPath) {
-      var _this2 = this;
+      var _this = this;
 
       var files = [];
 
@@ -306,11 +296,11 @@ function () {
         var fileStat = _fs.default.statSync(filePath);
 
         if (fileStat.isFile()) {
-          var component = _this2.loadFile(filePath, dirPath);
+          var component = _this.loadFile(filePath, dirPath);
 
           files.push(component);
         } else {
-          _this2.fail("directory '".concat(dirPath, "' must include files only"));
+          _this.fail("directory '".concat(dirPath, "' must include files only"));
         }
       });
 
@@ -342,7 +332,7 @@ function () {
   }, {
     key: "processPageDir",
     value: function processPageDir(pageDir) {
-      var _this3 = this;
+      var _this2 = this;
 
       var absPagesDir = _path.default.resolve(this.inputDir, this.pagesDir);
 
@@ -358,20 +348,22 @@ function () {
         var fileStat = _fs.default.statSync(filePath);
 
         if (fileStat.isDirectory()) {
-          var folder = _this3.processPageDir(filePath);
+          var folder = _this2.processPageDir(filePath);
 
           pageTree.folders.push(folder); // TODO: what if folder name is a number, add folderMap instead
+          // TODO: remove in v0.3
 
           pageTree.folders[fileName] = folder;
         } else if (fileStat.isFile()) {
-          var page = _this3.parsePageForFilePath(filePath);
+          var page = _this2.parsePageForFilePath(filePath);
 
           if (page) {
             pageTree.pages.push(page); // TODO: what if name is a number, add pageMap instead
+            // TODO: remove in v0.3
             // pageTree.pages[page.filename] = page;
           }
         } else {
-          _this3.fail("page file type is not supported: ".concat(filePath));
+          _this2.fail("page file type is not supported: ".concat(filePath));
         }
       });
 
@@ -435,17 +427,6 @@ function () {
       });
     }
   }, {
-    key: "flattenPageTree",
-    value: function flattenPageTree(pageTree) {
-      var _this4 = this;
-
-      var pages = [];
-      pageTree.folders.forEach(function (folder) {
-        pages = pages.concat(_this4.flattenPageTree(folder));
-      });
-      return pages.concat(pageTree.pages);
-    }
-  }, {
     key: "createMenus",
     value: function createMenus(data) {
       var siteMenuItems = this.getSiteMenus(data);
@@ -463,12 +444,14 @@ function () {
   }, {
     key: "getPageMenus",
     value: function getPageMenus(data) {
-      var _this5 = this;
+      var _this3 = this;
+
+      var pages = _utils.default.flattenPageTree(data.pageTree);
 
       var pageMenuItems = [];
 
-      _lodash.default.forEach(data.pages, function (page) {
-        pageMenuItems = pageMenuItems.concat(_this5.getPageMenuItems(page));
+      _lodash.default.forEach(pages, function (page) {
+        pageMenuItems = pageMenuItems.concat(_this3.getPageMenuItems(page));
       });
 
       return pageMenuItems;
@@ -476,7 +459,9 @@ function () {
   }, {
     key: "getPageMenuItems",
     value: function getPageMenuItems(page) {
-      var menus = _lodash.default.get(page, 'menus', null);
+      var ssgConsts = this.ssgConsts();
+
+      var menus = _lodash.default.get(page, ssgConsts.pageMenusKey, null);
 
       if (!menus || !_lodash.default.isPlainObject(menus)) {
         return [];
@@ -496,7 +481,7 @@ function () {
   }, {
     key: "createMenusFromMenuItems",
     value: function createMenusFromMenuItems(menuItems) {
-      var _this6 = this;
+      var _this4 = this;
 
       var rootMenus = {};
       var menusByName = {};
@@ -529,7 +514,7 @@ function () {
             menuItem.children = rootMenus[identifier];
             delete rootMenus[identifier];
           } else {
-            _this6.fail("A menu item identifier must be unique");
+            _this4.fail("A menu item identifier must be unique");
           }
         }
 
@@ -650,6 +635,73 @@ exports.default = GatsbyLoader;
 
 /***/ }),
 
+/***/ "./dist/loaders/hugo-loader.js":
+/*!*************************************!*\
+  !*** ./dist/loaders/hugo-loader.js ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
+
+var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+var HugoLoader =
+/*#__PURE__*/
+function (_BaseLoader) {
+  _inherits(HugoLoader, _BaseLoader);
+
+  function HugoLoader() {
+    _classCallCheck(this, HugoLoader);
+
+    return _possibleConstructorReturn(this, _getPrototypeOf(HugoLoader).apply(this, arguments));
+  }
+
+  _createClass(HugoLoader, [{
+    key: "ssgConsts",
+    value: function ssgConsts() {
+      return _ssgConsts.HUGO;
+    }
+  }]);
+
+  return HugoLoader;
+}(_baseLoader.default);
+
+exports.default = HugoLoader;
+//# sourceMappingURL=hugo-loader.js.map
+
+/***/ }),
+
 /***/ "./dist/loaders/index.js":
 /*!*******************************!*\
   !*** ./dist/loaders/index.js ***!
@@ -676,16 +728,20 @@ Object.defineProperty(exports, "JekyllLoader", {
     return _jekyllLoader.default;
   }
 });
-
-var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
-
-var _fs = _interopRequireDefault(__webpack_require__(/*! fs */ "fs"));
+Object.defineProperty(exports, "HugoLoader", {
+  enumerable: true,
+  get: function get() {
+    return _hugoLoader.default;
+  }
+});
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
 var _unibitLoader = _interopRequireDefault(__webpack_require__(/*! ./unibit-loader */ "./dist/loaders/unibit-loader.js"));
 
 var _jekyllLoader = _interopRequireDefault(__webpack_require__(/*! ./jekyll-loader */ "./dist/loaders/jekyll-loader.js"));
+
+var _hugoLoader = _interopRequireDefault(__webpack_require__(/*! ./hugo-loader */ "./dist/loaders/hugo-loader.js"));
 
 var _gatsbyLoader = _interopRequireDefault(__webpack_require__(/*! ./gatsby-loader */ "./dist/loaders/gatsby-loader.js"));
 
@@ -698,6 +754,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var loaderMap = {
   unibit: _unibitLoader.default,
   jekyll: _jekyllLoader.default,
+  hugo: _hugoLoader.default,
   gatsby: _gatsbyLoader.default
 };
 /**
@@ -708,11 +765,7 @@ var loaderMap = {
 function loadSite(options) {
   var inputDir = _lodash.default.get(options, 'inputDir');
 
-  var stackbitYamlPath = _lodash.default.chain(_consts.default.STACKBIT_YAML_NAMES).map(function (filePath) {
-    return _path.default.resolve(inputDir, filePath);
-  }).find(function (filePath) {
-    return _fs.default.existsSync(filePath);
-  }).value();
+  var stackbitYamlPath = _utils.default.getFirstExistingFileSync(_consts.default.STACKBIT_YAML_NAMES, inputDir);
 
   if (!stackbitYamlPath) {
     throw new Error("can not load site, file not found: ".concat(_consts.default.STACKBIT_YAML));
@@ -834,7 +887,7 @@ var _ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converte
 
 var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
 
-var _base = _interopRequireDefault(__webpack_require__(/*! ../supporting-files/unibit/base.html */ "./dist/supporting-files/unibit/base.html.js"));
+var _base = _interopRequireDefault(__webpack_require__(/*! ../unibit/supporting-files/base.html */ "./dist/unibit/supporting-files/base.html.js"));
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
@@ -977,36 +1030,47 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+var siteProps = ['absPath', 'ssgName', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'templates', 'components', 'pageTree', 'menus', 'menuNames', 'menusByName'];
+/**
+ * @class Site
+ *
+ * @property {string} absPath
+ * @property {string} ssgName
+ * @property {string} staticDir
+ * @property {string} dataDir
+ * @property {string} pagesDir
+ * @property {string} pageTemplateKey
+ * @property {object} config
+ * @property {string} stackbitYamlFileName
+ * @property {object} stackbitYaml
+ * @property {array} dataFiles
+ * @property {array} templates
+ * @property {array} components
+ * @property {object} pageTree
+ * @property {object} menus
+ * @property {array} menuNames
+ * @property {object} menusByName
+ * @property {array} pages
+ * @property {object} data
+ *
+ * @method clone
+ */
+
 var Site =
 /*#__PURE__*/
 function () {
   function Site(data) {
+    var _this = this;
+
     _classCallCheck(this, Site);
 
-    this.absPath = data.absPath;
-    this.ssgName = data.ssgName;
-    this.staticDir = data.staticDir;
-    this.dataDir = data.dataDir;
-    this.pagesDir = data.pagesDir;
-    this.pageTemplateKey = data.pageTemplateKey;
-    this.config = data.config;
-    this.stackbitYamlFileName = data.stackbitYamlFileName;
-    this.stackbitYaml = data.stackbitYaml;
-    this.dataFiles = data.dataFiles;
-    this.templates = data.templates;
-    this.components = data.components;
-    this.pageTree = data.pageTree;
-    this.menus = data.menus;
-    this.menuNames = data.menuNames;
-    this.menusByName = data.menusByName;
+    data = _lodash.default.pick(data, siteProps);
+    data = _lodash.default.cloneDeep(data);
+    this.addComputedProperties(data);
 
-    if (data.pages) {
-      this.pages = data.pages;
-    } else {
-      this.pages = this.flattenPageTree(this.pageTree);
-    }
-
-    this.data = this.mergeData(data.dataFiles);
+    _lodash.default.keys(data).forEach(function (key) {
+      _this[key] = data[key];
+    });
 
     _utils.default.deepFreeze(this);
   }
@@ -1014,13 +1078,16 @@ function () {
   _createClass(Site, [{
     key: "clone",
     value: function clone(options) {
-      var keys = _lodash.default.keys(this);
+      var data = _lodash.default.pick(this, siteProps);
 
-      var clonedData = _lodash.default.cloneDeep(_lodash.default.pick(this, keys));
-
-      var data = _lodash.default.assign(clonedData, _lodash.default.pick(options, keys));
-
+      data = _lodash.default.assign({}, data, _lodash.default.pick(options, siteProps));
       return new Site(data);
+    }
+  }, {
+    key: "addComputedProperties",
+    value: function addComputedProperties(siteData) {
+      siteData.pages = _utils.default.flattenPageTree(siteData.pageTree);
+      siteData.data = this.mergeData(siteData.dataFiles);
     }
   }, {
     key: "mergeData",
@@ -1040,42 +1107,31 @@ function () {
   }, {
     key: "clonePageTree",
     value: function clonePageTree(pageTree) {
-      var _this = this;
+      var _this2 = this;
+
+      if (!pageTree) {
+        return null;
+      }
 
       var pages = [];
       pageTree.pages.forEach(function (page) {
-        var filename = page.filename;
-
+        // let filename = page.filename;
         var clone = _lodash.default.cloneDeep(page);
 
-        pages.push(clone);
-        pages[filename] = clone;
+        pages.push(clone); // pages[filename] = clone;
       });
       var folders = [];
       pageTree.folders.forEach(function (folder) {
-        var folderName = _path.default.relative(pageTree.path, folder.path);
+        // let folderName = path.relative(pageTree.path, folder.path);
+        var clone = _this2.clonePageTree(folder);
 
-        var clone = _this.clonePageTree(folder);
-
-        folders.push(clone);
-        folders[folderName] = clone;
+        folders.push(clone); // folders[folderName] = clone;
       });
       return {
         path: pageTree.path,
         pages: pages,
         folders: folders
       };
-    }
-  }, {
-    key: "flattenPageTree",
-    value: function flattenPageTree(pageTree) {
-      var _this2 = this;
-
-      var pages = [];
-      pageTree.folders.forEach(function (folder) {
-        pages = pages.concat(_this2.flattenPageTree(folder));
-      });
-      return pages.concat(pageTree.pages);
     }
   }]);
 
@@ -1118,7 +1174,7 @@ var inputDirOption = {
   defaultDescription: 'current working directory'
 };
 
-var argv = _yargs.default.usage('Usage: $0 <command> [options]').command('build', 'Build site', function (yargs) {
+var buildOptions = function buildOptions(yargs) {
   return yargs.options({
     'input-dir': inputDirOption,
     'output-dir': {
@@ -1128,21 +1184,33 @@ var argv = _yargs.default.usage('Usage: $0 <command> [options]').command('build'
         return _path.default.join(process.cwd(), 'public');
       },
       defaultDescription: '"build" folder inside current working directory'
+    },
+    'with-banner': {
+      describe: 'Show stackbit theme banner.',
+      boolean: true,
+      default: false,
+      defaultDescription: 'Displays the Stackbit theme banner'
     }
   });
-}).command('validate', 'Validate theme', function (yargs) {
+};
+
+var argv = _yargs.default.usage('Usage: $0 <command> [options]').command('build', 'Build site', buildOptions).command('develop', 'Develop site', buildOptions).command('validate', 'Validate theme', function (yargs) {
   return yargs.options({
     'input-dir': inputDirOption
   });
-}).demandCommand(1, 'You need to specify at least one command').example('$0 build -i path/to/source -o path/to/target', 'Build site from Unibit site located in the "path/to/source" folder and save it in the "path/to/target" folder.').wrap(null).help().argv;
+}).alias('v', 'version').demandCommand(1, 'You need to specify at least one command').example('$0 build -i path/to/source -o path/to/target', 'Build site from Unibit site located in the "path/to/source" folder and save it in the "path/to/target" folder.').wrap(null).help().argv;
 
-if (argv._[0] === 'build') {
+var command = argv._[0];
+
+if (command === 'build' || command === 'develop') {
   var unibit = new _unibit.default({
     inputDir: argv.inputDir,
-    outputDir: argv.outputDir
+    outputDir: argv.outputDir,
+    withBanner: argv.withBanner,
+    watch: command === 'develop'
   });
   unibit.generate();
-} else if (argv._[0] === 'validate') {
+} else if (command === 'validate') {
   var validator = new _validator.default(argv.inputDir, new _consoleRenderer.default());
   validator.validate();
 
@@ -1214,7 +1282,7 @@ var JEKYLL = {
   componentsDir: '_includes',
   publishDir: '_site',
   buildCommand: 'jekyll build',
-  configMenuItemFields: null,
+  menuItemFields: null,
   injectLocations: {
     htmlHead: {
       file: '_layouts/base.html',
@@ -1243,11 +1311,11 @@ var HUGO = {
   componentsDir: 'layouts/partials',
   publishDir: 'public',
   buildCommand: 'hugo',
-  configMenuItemFields: [{
+  menuItemFields: [{
     type: 'string',
     name: 'parent',
     label: 'Parent Menu Identifier',
-    description: 'The parent of an entry should be the identifier of another entry. The identifier should be unique (within a menu).'
+    description: 'The parent of an entry should be the identifier of another entry.'
   }],
   injectLocations: {
     htmlHead: {
@@ -1278,7 +1346,7 @@ var GATSBY = {
   componentsDir: 'src/components',
   publishDir: 'public',
   buildCommand: 'gatsby build',
-  configMenuItemFields: null,
+  menuItemFields: null,
   scriptInjectToken: GATSBY_SCRIPT_INJECT_TOKEN,
   injectLocations: {
     htmlHead: {
@@ -1309,7 +1377,7 @@ var UNIBIT = {
   componentsDir: 'components',
   publishDir: 'output',
   buildCommand: 'unibit build',
-  configMenuItemFields: null,
+  menuItemFields: null,
   injectLocations: {
     htmlHead: {
       file: 'components/html_head.html'
@@ -1662,25 +1730,492 @@ function pushIfNotExistsByField(arr, items) {
 
 /***/ }),
 
-/***/ "./dist/supporting-files/unibit/base.html.js":
+/***/ "./dist/unibit/filters.js":
+/*!********************************!*\
+  !*** ./dist/unibit/filters.js ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.relativeUrl = relativeUrl;
+exports.dateFormat = dateFormat;
+exports.sprintf = sprintf;
+exports.sliceArray = sliceArray;
+exports.sortArray = sortArray;
+exports.split = split;
+exports.append = append;
+exports.replaceRegexp = replaceRegexp;
+exports.startsWith = startsWith;
+exports.endsWith = endsWith;
+exports.where = where;
+
+var _strftime = _interopRequireDefault(__webpack_require__(/*! strftime */ "strftime"));
+
+var _moment = _interopRequireDefault(__webpack_require__(/*! moment */ "moment"));
+
+var _sprintfJs = _interopRequireDefault(__webpack_require__(/*! sprintf-js */ "sprintf-js"));
+
+var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
+
+var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var fail = _utils.default.failFunctionWithTag('UnibitFilters');
+
+var assert = _utils.default.assertFunctionWithFail(fail);
+
+function relativeUrl(context, url) {
+  if (_lodash.default.startsWith(url, '#') || _lodash.default.startsWith(url, 'http')) {
+    return url;
+  }
+
+  var urlsRelativeToBase = _lodash.default.get(context.config, 'urls_relative_to_base', true);
+
+  if (!urlsRelativeToBase && !_lodash.default.startsWith(url, '/')) {
+    var pageDir = _path.default.parse(context.renderingPage.outputUrl).dir;
+
+    assert(!_lodash.default.startsWith(pageDir, '/'), "error in relativeUrl, page dir can not be absolute");
+    return _path.default.relative(pageDir, url);
+  } else {
+    var baseUrl = _lodash.default.get(context.config, 'baseurl', '');
+
+    return _path.default.join(baseUrl, '/', url);
+  }
+}
+
+function dateFormat(date, format, type) {
+  type = _lodash.default.defaultTo(type, 'strftime');
+  var res;
+
+  if (type === 'strftime') {
+    res = (0, _strftime.default)(format, date);
+  } else if (type === 'moment') {
+    res = (0, _moment.default)(date).format(format);
+  } else {
+    res = date.toString();
+  }
+
+  return res;
+}
+
+function sprintf(str, format) {
+  return _sprintfJs.default.sprintf(str, format);
+}
+
+function sliceArray(arr, begin, end) {
+  return arr.slice(begin, end);
+}
+
+function sortArray(arr, keyPath) {
+  var order = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'asc';
+  return _lodash.default.orderBy(arr, keyPath, order);
+}
+
+function split(str, separator) {
+  return _lodash.default.split(str, separator);
+}
+
+function append(str, appendStr) {
+  return str + appendStr;
+}
+
+function replaceRegexp(str, pattern, replacement) {
+  return str.replace(new RegExp(pattern), replacement);
+}
+
+function startsWith(str, prefix) {
+  return _lodash.default.startsWith(str, prefix);
+}
+
+function endsWith(str, prefix) {
+  return _lodash.default.endsWith(str, prefix);
+}
+
+function where(array, key, operator, match) {
+  var predicate;
+  var operatorMap = {
+    '==': _lodash.default.eq,
+    '!=': function _(value, otherValue) {
+      return value !== otherValue;
+    },
+    '>': _lodash.default.gt,
+    '>=': _lodash.default.ge,
+    '<': _lodash.default.lt,
+    '<=': _lodash.default.le
+  };
+
+  if (!operator) {
+    predicate = function predicate(element) {
+      return _lodash.default.has(element, key);
+    };
+  } else {
+    if (!match) {
+      match = operator;
+      operator = '==';
+    }
+
+    predicate = function predicate(element) {
+      var value = _lodash.default.get(element, key);
+
+      return operatorMap[operator](value, match);
+    };
+  }
+
+  return _lodash.default.filter(array, predicate);
+}
+//# sourceMappingURL=filters.js.map
+
+/***/ }),
+
+/***/ "./dist/unibit/live-reload.js":
+/*!************************************!*\
+  !*** ./dist/unibit/live-reload.js ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _ws = __webpack_require__(/*! ws */ "ws");
+
+var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _events = _interopRequireDefault(__webpack_require__(/*! events */ "events"));
+
+var _chokidar = _interopRequireDefault(__webpack_require__(/*! chokidar */ "chokidar"));
+
+var _http = _interopRequireDefault(__webpack_require__(/*! http */ "http"));
+
+var _fsExtra = _interopRequireDefault(__webpack_require__(/*! fs-extra */ "fs-extra"));
+
+var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
+
+var _url = _interopRequireDefault(__webpack_require__(/*! url */ "url"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var startingPort = 5000;
+var portTryPool = 10;
+var mimeType = {
+  '.ico': 'image/x-icon',
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.json': 'application/json',
+  '.css': 'text/css',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.svg': 'image/svg+xml',
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.eot': 'appliaction/vnd.ms-fontobject',
+  '.ttf': 'aplication/font-sfnt'
+};
+/**
+ * Serve middleware for files from filesDir
+ * @param {String} filesDir
+ * @param {Object} req
+ * @param {Object} res
+ */
+
+var serve = function serve(filesDir, req, res) {
+  var parsedUrl = _url.default.parse(req.url);
+
+  var sanitizePath = _path.default.normalize(parsedUrl.pathname).replace(/^(\.\.[\/\\])+/, '');
+
+  var pathname = _path.default.join(_path.default.resolve(filesDir), sanitizePath);
+
+  _fsExtra.default.exists(pathname).then(function (exist) {
+    if (!exist) {
+      throw 404;
+    }
+
+    return _fsExtra.default.stat(pathname);
+  }).then(function (stat) {
+    if (stat.isDirectory()) {
+      pathname += 'index.html';
+    }
+
+    return _fsExtra.default.readFile(pathname);
+  }).then(function (data) {
+    var ext = _path.default.parse(pathname).ext;
+
+    res.setHeader('Content-type', mimeType[ext] || 'text/plain');
+    res.end(data);
+  }).catch(function (err) {
+    if (err === 404) {
+      res.statusCode = 404;
+      res.end("File ".concat(pathname, " not found!"));
+      return;
+    }
+
+    res.statusCode = 500;
+    res.end("Error getting the file: ".concat(err, "."));
+  });
+};
+/**
+ * Start server on port, serving files from filesDir
+ * @param {Number} port
+ * @param {String} filesDir
+ * @returns {Promise<Object>} resolves with object containing server, port and
+ * websocket active connections. Rejects in case if port is occupied.
+ */
+
+
+var startServer = function startServer(port, filesDir) {
+  return new Promise(function (resolve, reject) {
+    var connections = [];
+
+    var server = _http.default.createServer(function () {
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      return serve.apply(void 0, [filesDir].concat(args));
+    });
+
+    server.listen(port, function () {
+      var socket = new _ws.Server({
+        server: server
+      });
+      socket.on('connection', function (connection) {
+        connections.push(connection);
+        connection.on('close', function () {
+          return connections.splice(connections.indexOf(connection), 1);
+        });
+      });
+      resolve({
+        server: server,
+        connections: connections,
+        port: port
+      });
+    });
+    server.on('error', function (error) {
+      if (error.toString().match(/EADDRINUSE/)) {
+        reject();
+      }
+    });
+  });
+};
+/**
+ * Get server running on first of available port from ports array, serve files
+ * from filesDir
+ * @param {Number[]} ports
+ * @param {String} filesDir
+ * @returns {null|Promise<Object>}
+ */
+
+
+var getServer = function getServer(ports, filesDir) {
+  if (!ports.length) {
+    return null;
+  }
+
+  return startServer(ports[0], filesDir).catch(function () {
+    return getServer(ports.slice(1), filesDir);
+  });
+};
+/**
+ * Send reload message to all passed connections
+ * @param {Object[]} connections
+ */
+
+
+var reload = function reload(connections) {
+  console.log('Watcher: Reload page');
+  connections.filter(function (connection) {
+    return connection.readyState === 1;
+  }).forEach(function (connection) {
+    return connection.send();
+  });
+};
+/**
+ * Emits change event for file at path
+ * @param {String} event
+ * @param {String} filePath
+ * @param {Object} emitter
+ */
+
+
+var fileDidChange = function fileDidChange(event, filePath, emitter) {
+  console.log("Watcher: ".concat(_lodash.default.capitalize(event), " ").concat(filePath));
+  emitter.emit('change', filePath, event);
+};
+/**
+ * Watch files change in input dir, start live reload server on port and serve static files from outputDir
+ * @param {Object} options
+ * @param {String} options.inputDir original files directory
+ * @param {String} options.outputDir directory with compiled files, root folder for serving server
+ * @param {Number} [options.port=startingPort] server port
+ * @returns {Promise<Object>} watcher api
+ */
+
+
+var watcher = function watcher(options) {
+  var inputDir = _lodash.default.get(options, 'inputDir');
+
+  var outputDir = _lodash.default.get(options, 'outputDir');
+
+  var port = _lodash.default.get(options, 'port', startingPort);
+
+  if (!inputDir) {
+    throw new Error('Should provide inputDir');
+  }
+
+  if (!outputDir) {
+    throw new Error('Should provide outputDir');
+  }
+
+  return getServer(_lodash.default.range(port, port + portTryPool), outputDir).then(function (server) {
+    if (!server) {
+      throw new Error("All ports from ".concat(port, " to ").concat(port + portTryPool, " are occupied"));
+    }
+
+    console.log("Started server at http://localhost:".concat(server.port));
+    var eventEmitter = new _events.default();
+
+    var watcher = _chokidar.default.watch(_path.default.resolve(inputDir), {
+      ignoreInitial: true
+    });
+
+    watcher.on('change', function (filePath) {
+      return fileDidChange('change', filePath, eventEmitter);
+    }).on('add', function (filePath) {
+      return fileDidChange('add', filePath, eventEmitter);
+    }).on('unlink', function (filePath) {
+      return fileDidChange('remove', filePath, eventEmitter);
+    });
+    console.log("Start watching files at ".concat(inputDir));
+    return {
+      events: eventEmitter,
+      reload: reload.bind(null, server.connections),
+      port: server.port
+    };
+  });
+};
+
+module.exports = watcher;
+//# sourceMappingURL=live-reload.js.map
+
+/***/ }),
+
+/***/ "./dist/unibit/supporting-files/base.html.js":
 /*!***************************************************!*\
-  !*** ./dist/supporting-files/unibit/base.html.js ***!
+  !*** ./dist/unibit/supporting-files/base.html.js ***!
   \***************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
 module.exports = `<!doctype html>
 <html>
-    <head>
+    <head>    
+        {% if stackbit_banner.show_banner %}<link rel="stylesheet" type="text/css" href={{ "assets/css/stackbit-banner.css" | relative_url }}>{% endif %}
         {% include "html_head.html" %}
+        {% if liveReload %}<script type="text/javascript" src={{ "assets/js/live-reload.js" | relative_url }}></script>{% endif %}
     </head>
     <body{% if templates.body_class %} class="{{ templates.body_class }}"{% endif %}>
+        {% if stackbit_banner.show_banner %}
+            {% include stackbit_banner.component %}
+        {% endif %}
         {% block body %}{% endblock %}
         {% include "post_body.html" %}
-    </body>
+    </body> 
 </html>
 `;
 
+
+/***/ }),
+
+/***/ "./dist/unibit/supporting-files/stackbit-banner.html.js":
+/*!**************************************************************!*\
+  !*** ./dist/unibit/supporting-files/stackbit-banner.html.js ***!
+  \**************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar-hidden">
+  <div class="theme-bar-left">
+    <div class="theme-bar-name">
+        {% if stackbit_banner.name %}{{ stackbit_banner.name }}{% endif %}
+    </div>
+  </div>
+  <div class="theme-bar-center">
+    {% if stackbit_banner.github_url %}
+    <a
+      class="theme-bar-button theme-bar-button-outlined"
+      href="{% if stackbit_banner.github_url %}{{ stackbit_banner.github_url }}{% endif %}"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+        <path
+          fill="currentColor"
+          d="M384 144c0-44.2-35.8-80-80-80s-80 35.8-80 80c0 36.4 24.3 67.1 57.5 76.8-.6 16.1-4.2 28.5-11 36.9-15.4 19.2-49.3 22.4-85.2 25.7-28.2 2.6-57.4 5.4-81.3 16.9v-144c32.5-10.2 56-40.5 56-76.3 0-44.2-35.8-80-80-80S0 35.8 0 80c0 35.8 23.5 66.1 56 76.3v199.3C23.5 365.9 0 396.2 0 432c0 44.2 35.8 80 80 80s80-35.8 80-80c0-34-21.2-63.1-51.2-74.6 3.1-5.2 7.8-9.8 14.9-13.4 16.2-8.2 40.4-10.4 66.1-12.8 42.2-3.9 90-8.4 118.2-43.4 14-17.4 21.1-39.8 21.6-67.9 31.6-10.8 54.4-40.7 54.4-75.9zM80 64c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16zm0 384c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16zm224-320c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16z"
+        ></path>
+      </svg>
+      <span>Fork</span>
+    </a>
+    {% endif %}
+    {% if stackbit_banner.launch_url %}
+    <a
+      class="theme-bar-button theme-bar-button-primary"
+      href="{{ stackbit_banner.launch_url }}"
+    >
+      <svg fill="currentColor" viewBox="0 0 131 107">
+        <defs>
+          <path
+            id="a"
+            d="M116.6 62L66.5 89.9 15.4 62c-1.9-1.1-4.4-.3-5.4 1.6-1.1 1.9-.3 4.4 1.6 5.4l53 29c1.2.7 2.7.7 3.9 0l52-29c1.9-1.1 2.6-3.5 1.5-5.4-1.1-2-3.5-2.7-5.4-1.6zm-95-18.5l44.9-25.4 50 28.9c1.9 1.1 4.4.4 5.5-1.5 1.1-1.9.4-4.4-1.5-5.5l-52-30c-1.2-.7-2.7-.7-4 0l-53 30c-2.7 1.5-2.7 5.4 0 7l53 30c1.9 1.1 4.4.4 5.5-1.5 1.1-1.9.4-4.4-1.5-5.5L21.6 43.5zM1 64.5v-20c-.4-4.6 1.7-9.3 6.3-11.9l53-30c3.9-2.2 8.6-2.2 12.4.1l52 30c4.3 2.5 6.6 7.2 6.2 11.8v20c.4 4.7-2 9.5-6.4 11.9l-52 29c-3.8 2.1-8.3 2.1-12.1 0l-53-29C3 74 .7 69.3 1 64.5z"
+          />
+        </defs>
+        <use fill-rule="evenodd" xlink:href="#a" />
+      </svg>
+      <span>New Site</span>
+    </a>
+    {% endif %}
+  </div>
+  <div class="theme-bar-right">
+    <button
+      id="remove-theme-bar"
+      class="theme-bar-button theme-bar-button-link"
+    >
+      <svg viewBox="0 0 320 512" class="remove-icon">
+        <path
+          fill="currentColor"
+          d="M207.6 256l107.72-107.72c6.23-6.23 6.23-16.34 0-22.58l-25.03-25.03c-6.23-6.23-16.34-6.23-22.58 0L160 208.4 52.28 100.68c-6.23-6.23-16.34-6.23-22.58 0L4.68 125.7c-6.23 6.23-6.23 16.34 0 22.58L112.4 256 4.68 363.72c-6.23 6.23-6.23 16.34 0 22.58l25.03 25.03c6.23 6.23 16.34 6.23 22.58 0L160 303.6l107.72 107.72c6.23 6.23 16.34 6.23 22.58 0l25.03-25.03c6.23-6.23 6.23-16.34 0-22.58L207.6 256z"
+        ></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  var body = document.querySelector("body");
+  var themebar = document.querySelector("#theme-bar");
+  var hideThemeBar = sessionStorage.getItem('hideThemeBar');
+  if (body && !hideThemeBar) {
+    body.classList.add("has-theme-bar");
+    themebar.classList.remove("theme-bar-hidden");
+  }
+  document
+    .querySelector("#remove-theme-bar")
+    .addEventListener("click", function(e) {
+      e.preventDefault();
+      body.classList.remove("has-theme-bar");
+      themebar.classList.add("theme-bar-hidden");
+      sessionStorage.setItem('hideThemeBar', true);
+    });
+</script>
+`;
 
 /***/ }),
 
@@ -1699,7 +2234,9 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
-var baseHtml = __webpack_require__(/*! ../supporting-files/unibit/base.html */ "./dist/supporting-files/unibit/base.html.js");
+var baseHtml = __webpack_require__(/*! ./supporting-files/base.html */ "./dist/unibit/supporting-files/base.html.js");
+
+var bannerHtml = __webpack_require__(/*! ./supporting-files/stackbit-banner.html */ "./dist/unibit/supporting-files/stackbit-banner.html.js");
 
 function UnibitNunjucksLoader(opts) {}
 
@@ -1712,6 +2249,14 @@ UnibitNunjucksLoader.prototype.getSource = function (name) {
   if (name === 'base.html') {
     return {
       src: baseHtml,
+      path: name,
+      noCache: false
+    };
+  }
+
+  if (name === 'stackbit-banner.html') {
+    return {
+      src: bannerHtml,
       path: name,
       noCache: false
     };
@@ -1755,17 +2300,19 @@ var _prettier = _interopRequireDefault(__webpack_require__(/*! prettier */ "pret
 
 var _nodeSass = _interopRequireDefault(__webpack_require__(/*! node-sass */ "node-sass"));
 
-var _strftime = _interopRequireDefault(__webpack_require__(/*! strftime */ "strftime"));
-
-var _moment = _interopRequireDefault(__webpack_require__(/*! moment */ "moment"));
-
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _liveReload = _interopRequireDefault(__webpack_require__(/*! ./live-reload */ "./dist/unibit/live-reload.js"));
 
 var _unibitLoader = _interopRequireDefault(__webpack_require__(/*! ../loaders/unibit-loader */ "./dist/loaders/unibit-loader.js"));
 
 var _unibitNunjucksLoader = _interopRequireDefault(__webpack_require__(/*! ./unibit-nunjucks-loader */ "./dist/unibit/unibit-nunjucks-loader.js"));
 
+var filters = _interopRequireWildcard(__webpack_require__(/*! ./filters */ "./dist/unibit/filters.js"));
+
 var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1781,21 +2328,38 @@ function () {
   function Unibit(options) {
     _classCallCheck(this, Unibit);
 
-    this.loader = new _unibitLoader.default({
-      inputDir: _lodash.default.get(options, 'inputDir')
-    });
-    this.site = this.loader.loadSite();
     this.prettierOptions = _lodash.default.get(options, 'prettier');
+    this.inputDir = _lodash.default.get(options, 'inputDir');
     this.outputDir = _lodash.default.get(options, 'outputDir', 'output');
+    this.inputConfig = _lodash.default.get(options, 'config', {});
+    this.withBanner = _lodash.default.get(options, 'withBanner', false);
+    this.watch = _lodash.default.get(options, 'watch', false);
     console.log("Unibit: generating site into ".concat(_path.default.resolve(this.outputDir)));
-    this.config = _lodash.default.merge({}, this.site.config.data, _lodash.default.get(options, 'config', null));
-    this.pages = _lodash.default.cloneDeep(this.site.pages);
+
+    _lodash.default.forEach(options, function (value, key) {
+      console.log("  ".concat(key, ": ").concat(value));
+    });
+
+    this.watcher = null;
+    this.isGenerating = false;
+    this.enqueue = false;
     this.renderingPage = null;
     this.pageRenderQueue = [];
-    this.loadNunjucksEnv();
   }
 
   _createClass(Unibit, [{
+    key: "loadSite",
+    value: function loadSite() {
+      this.loader = new _unibitLoader.default({
+        inputDir: this.inputDir
+      });
+      this.site = this.loader.loadSite();
+      this.config = _lodash.default.merge({}, this.site.config.data, this.inputConfig);
+      this.pages = _lodash.default.cloneDeep(this.site.pages);
+      this.showBanner = _lodash.default.get(this.site, 'stackbitYaml.stackbit_banner.show_banner', false) || this.withBanner;
+      this.loadNunjucksEnv();
+    }
+  }, {
     key: "fail",
     value: function fail(message) {
       throw new Error("[".concat(this.constructor.name, "] ").concat(message));
@@ -1810,9 +2374,73 @@ function () {
   }, {
     key: "generate",
     value: function generate() {
-      this.copyStaticFiles();
-      this.compileSass();
-      return this.generatePages();
+      var _this = this;
+
+      if (this.isGenerating) {
+        this.enqueue = true;
+        return Promise.resolve();
+      }
+
+      this.isGenerating = true;
+      return Promise.resolve().then(function () {
+        return _this.watch && !_this.watcher && _this.registerWatcher();
+      }).then(function () {
+        var outputDir = _path.default.resolve(_this.outputDir);
+
+        _fsExtra.default.emptyDirSync(outputDir);
+
+        _this.pageRenderQueue = [];
+        _this.renderingPage = null;
+
+        _this.loadSite();
+
+        _this.copyStaticFiles();
+
+        _this.copySupportingFiles();
+
+        _this.compileSass();
+
+        return _this.generatePages();
+      }).then(function () {
+        _this.isGenerating = false;
+
+        if (_this.enqueue) {
+          _this.enqueue = false;
+          return _this.generate();
+        } else if (_this.watcher) {
+          _this.watcher.reload();
+        }
+      }).catch(function (err) {
+        _this.isGenerating = false;
+        _this.enqueue = false;
+      });
+    }
+  }, {
+    key: "registerWatcher",
+    value: function registerWatcher() {
+      var _this2 = this;
+
+      var inputDir = this.inputDir,
+          outputDir = this.outputDir;
+      return (0, _liveReload.default)({
+        inputDir: inputDir,
+        outputDir: outputDir
+      }).then(function (watcher) {
+        _this2.watcher = watcher;
+
+        _this2.watcher.events.on('change', _lodash.default.debounce(_this2.generate.bind(_this2), 200));
+      });
+    }
+  }, {
+    key: "copySupportingFiles",
+    value: function copySupportingFiles() {
+      if (this.showBanner) {
+        _fs.default.copyFileSync(_path.default.join(__dirname, './supporting-files/stackbit-banner.css'), _path.default.join(this.outputDir, '/assets/css/stackbit-banner.css'));
+      }
+
+      if (this.watch) {
+        _fs.default.copyFileSync(_path.default.join(__dirname, './supporting-files/live-reload.js'), _path.default.join(this.outputDir, '/assets/js/live-reload.js'));
+      }
     }
   }, {
     key: "copyStaticFiles",
@@ -1868,39 +2496,67 @@ function () {
   }, {
     key: "generatePages",
     value: function generatePages() {
-      var _this = this;
+      var _this3 = this;
 
       this.pages.forEach(function (page) {
-        page.content = _this.markdownify(page.markdown);
+        page.content = _this3.markdownify(page.markdown);
       });
       var pages = this.pages.filter(function (page) {
-        return _lodash.default.get(_this.config.output, page.relDir, true);
+        return _lodash.default.get(_this3.config.output, page.relDir, true);
       });
+      var pageTree = this.mapFolders(this.site.pageTree);
       console.log('Unibit: generating ' + pages.length + ' pages...');
       return _utils.default.forEachPromise(pages, function (page) {
-        var context = _this.createPageContext(page);
+        var context = _this3.createPageContext(page, pageTree);
 
-        return _this.renderAndSavePage(context, page.url).then(function () {
-          var pageRenderQueue = _lodash.default.remove(_this.pageRenderQueue);
+        return _this3.renderAndSavePage(context, page.url).then(function () {
+          var pageRenderQueue = _lodash.default.remove(_this3.pageRenderQueue);
 
           return _utils.default.forEachPromise(pageRenderQueue, function (renderItem) {
-            return _this.renderAndSavePage(renderItem.context, renderItem.outputUrl);
+            return _this3.renderAndSavePage(renderItem.context, renderItem.outputUrl);
           });
         });
       });
     }
+    /**
+     * Remove in v0.3
+     */
+
+  }, {
+    key: "mapFolders",
+    value: function mapFolders(pageTree) {
+      var _this4 = this;
+
+      var folders = [];
+
+      _lodash.default.forEach(pageTree.folders, function (folder) {
+        var folderName = _path.default.relative(pageTree.path, folder.path);
+
+        var mapped = _this4.mapFolders(folder);
+
+        folders.push(mapped);
+        folders[folderName] = mapped;
+      });
+
+      return {
+        path: pageTree.path,
+        pages: pageTree.pages,
+        folders: folders
+      };
+    }
   }, {
     key: "createPageContext",
-    value: function createPageContext(page) {
+    value: function createPageContext(page, pageTree) {
       // console.log('Unibit: generating page for ' + page.relPath);
       var config = this.config;
+      var stackbitYaml = this.site.stackbitYaml;
       var env = this.env;
       var context = {
         site: {
           title: config.title,
           baseurl: config.baseurl,
           pages: this.pages,
-          root: this.site.pageTree,
+          root: pageTree,
           data: this.site.data,
           menus: this.site.menus,
           params: config.params
@@ -1909,6 +2565,8 @@ function () {
           title: null,
           body_class: null
         },
+        stackbit_banner: this.getStackbitBannerContext(stackbitYaml),
+        liveReload: this.watch,
         page: page
       };
 
@@ -1929,6 +2587,19 @@ function () {
       return context;
     }
   }, {
+    key: "getStackbitBannerContext",
+    value: function getStackbitBannerContext(stackbitYaml) {
+      var stackbitBanner = _lodash.default.get(stackbitYaml, 'stackbit_banner');
+
+      return _lodash.default.assign({
+        show_banner: this.showBanner,
+        component: 'stackbit-banner.html',
+        name: this.config.title,
+        launch_url: "http://app.stackbit.com/wizard",
+        github_url: ""
+      }, stackbitBanner);
+    }
+  }, {
     key: "addPageToRenderQueue",
     value: function addPageToRenderQueue(context, outputUrl) {
       this.pageRenderQueue.push({
@@ -1939,7 +2610,7 @@ function () {
   }, {
     key: "renderAndSavePage",
     value: function renderAndSavePage(context, outputUrl) {
-      var _this2 = this;
+      var _this5 = this;
 
       this.assert(this.renderingPage === null, "Unibit: tying to generate two pages in parallel");
       this.renderingPage = {
@@ -1947,19 +2618,19 @@ function () {
         outputUrl: outputUrl
       };
       return this.renderPage(context).then(function (res) {
-        _this2.renderingPage = null;
+        _this5.renderingPage = null;
 
-        _this2.savePage(res, outputUrl);
+        _this5.savePage(res, outputUrl);
       });
     }
   }, {
     key: "renderPage",
     value: function renderPage(context) {
-      var _this3 = this;
+      var _this6 = this;
 
       var templateFile = _lodash.default.get(context.page, 'template', 'body') + '.html';
       return new Promise(function (resolve, reject) {
-        _this3.env.render(templateFile, context, function (err, res) {
+        _this6.env.render(templateFile, context, function (err, res) {
           if (err) {
             console.error("err:", err);
             reject(err);
@@ -1988,17 +2659,21 @@ function () {
     value: function loadNunjucksEnv() {
       var fileSystemLoader = new _nunjucks.default.FileSystemLoader([this.loader.templatesDir, this.loader.componentsDir]);
       this.env = new _nunjucks.default.Environment([fileSystemLoader, new _unibitNunjucksLoader.default()]);
-      this.env.addFilter('relative_url', this.relativeUrl.bind(this));
-      this.env.addFilter('date_format', this.dateFormat);
-      this.env.addFilter('slice_array', this.sliceArray);
-      this.env.addFilter('sort_array', this.sortArray);
-      this.env.addFilter('split', this.split);
+      this.env.addFilter('relative_url', _lodash.default.partial(filters.relativeUrl, {
+        config: this.config,
+        renderingPage: this.renderingPage
+      }));
+      this.env.addFilter('date_format', filters.dateFormat);
+      this.env.addFilter('sprintf', filters.sprintf);
+      this.env.addFilter('slice_array', filters.sliceArray);
+      this.env.addFilter('sort_array', filters.sortArray);
+      this.env.addFilter('split', filters.split);
       this.env.addFilter('markdownify', this.markdownify.bind(this));
-      this.env.addFilter('append', this.append);
-      this.env.addFilter('replace_regexp', this.replace_regexp);
-      this.env.addFilter('starts_with', this.startsWith);
-      this.env.addFilter('ends_with', this.endsWith);
-      this.env.addFilter('where', this.where);
+      this.env.addFilter('append', filters.append);
+      this.env.addFilter('replace_regexp', filters.replaceRegexp);
+      this.env.addFilter('starts_with', filters.startsWith);
+      this.env.addFilter('ends_with', filters.endsWith);
+      this.env.addFilter('where', filters.where);
       this.env.addFilter('link', this.link.bind(this));
       this.env.addExtension('LinkExtension', new LinkExtension(this));
     }
@@ -2055,7 +2730,7 @@ function () {
   }, {
     key: "paginate",
     value: function paginate(context, items, itemsPerPage) {
-      var _this4 = this;
+      var _this7 = this;
 
       context = _lodash.default.merge({}, context);
       var pagesCount = Math.max(1, Math.ceil(items.length / itemsPerPage));
@@ -2110,26 +2785,10 @@ function () {
           }
         });
 
-        _this4.addPageToRenderQueue(pageContext, outputUrl);
+        _this7.addPageToRenderQueue(pageContext, outputUrl);
       });
 
       return pages[0];
-    }
-  }, {
-    key: "sliceArray",
-    value: function sliceArray(arr, begin, end) {
-      return arr.slice(begin, end);
-    }
-  }, {
-    key: "sortArray",
-    value: function sortArray(arr, keyPath) {
-      var order = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'asc';
-      return _lodash.default.orderBy(arr, keyPath, order);
-    }
-  }, {
-    key: "split",
-    value: function split(str, separator) {
-      return _lodash.default.split(str, separator);
     }
   }, {
     key: "markdownify",
@@ -2141,96 +2800,6 @@ function () {
       } else {
         return str;
       }
-    }
-  }, {
-    key: "append",
-    value: function append(str, appendStr) {
-      return str + appendStr;
-    }
-  }, {
-    key: "replace_regexp",
-    value: function replace_regexp(str, pattern, replacement) {
-      return str.replace(new RegExp(pattern), replacement);
-    }
-  }, {
-    key: "startsWith",
-    value: function startsWith(str, prefix) {
-      return _lodash.default.startsWith(str, prefix);
-    }
-  }, {
-    key: "endsWith",
-    value: function endsWith(str, prefix) {
-      return _lodash.default.endsWith(str, prefix);
-    }
-  }, {
-    key: "relativeUrl",
-    value: function relativeUrl(url) {
-      if (_lodash.default.startsWith(url, '#') || _lodash.default.startsWith(url, 'http')) {
-        return url;
-      }
-
-      var urlsRelativeToBase = _lodash.default.get(this.config, 'urls_relative_to_base', true);
-
-      if (!urlsRelativeToBase && !_lodash.default.startsWith(url, '/')) {
-        var pageDir = _path.default.parse(this.renderingPage.outputUrl).dir;
-
-        this.assert(!_lodash.default.startsWith(pageDir, '/'), "error in relativeUrl, page dir can not be absolute");
-        return _path.default.relative(pageDir, url);
-      } else {
-        var baseUrl = _lodash.default.get(this.config, 'baseurl', '');
-
-        return _path.default.join(baseUrl, '/', url);
-      }
-    }
-  }, {
-    key: "dateFormat",
-    value: function dateFormat(date, format, type) {
-      type = _lodash.default.defaultTo(type, 'strftime');
-      var res;
-
-      if (type === 'strftime') {
-        res = (0, _strftime.default)(format, date);
-      } else if (type === 'moment') {
-        res = (0, _moment.default)(date).format(format);
-      } else {
-        res = date.toString();
-      }
-
-      return res;
-    }
-  }, {
-    key: "where",
-    value: function where(array, key, operator, match) {
-      var predicate;
-      var operatorMap = {
-        '==': _lodash.default.eq,
-        '!=': function _(value, otherValue) {
-          return value !== otherValue;
-        },
-        '>': _lodash.default.gt,
-        '>=': _lodash.default.ge,
-        '<': _lodash.default.lt,
-        '<=': _lodash.default.le
-      };
-
-      if (!operator) {
-        predicate = function predicate(element) {
-          return _lodash.default.has(element, key);
-        };
-      } else {
-        if (!match) {
-          match = operator;
-          operator = '==';
-        }
-
-        predicate = function predicate(element) {
-          var value = _lodash.default.get(element, key);
-
-          return operatorMap[operator](value, match);
-        };
-      }
-
-      return _lodash.default.filter(array, predicate);
     }
   }, {
     key: "link",
@@ -2375,6 +2944,8 @@ module.exports = {
   printHRTime: printHRTime,
   forEachDeep: forEachDeep,
   mapDeep: mapDeep,
+  getFirstExistingFileSync: getFirstExistingFileSync,
+  parseFirstExistingFileSync: parseFirstExistingFileSync,
   parseFileSync: parseFileSync,
   parseDataByFilePath: parseDataByFilePath,
   outputDataSync: outputDataSync,
@@ -2383,7 +2954,8 @@ module.exports = {
   joinPathAndGlob: joinPathAndGlob,
   failFunctionWithTag: failFunctionWithTag,
   assertFunctionWithFail: assertFunctionWithFail,
-  getPageModelNameByPageFilePath: getPageModelNameByPageFilePath
+  getPageModelNameByPageFilePath: getPageModelNameByPageFilePath,
+  flattenPageTree: flattenPageTree
 };
 
 var INDENT = _lodash.default.repeat(' ', 4);
@@ -2757,6 +3329,28 @@ function mapDeep(value, iteratee, options, _keyPath, _objectStack) {
   return value;
 }
 
+function getFirstExistingFileSync(fileNames, inputDir) {
+  return _lodash.default.chain(fileNames).map(function (filePath) {
+    return _path.default.resolve(inputDir, filePath);
+  }).find(function (filePath) {
+    return _fs.default.existsSync(filePath);
+  }).value();
+}
+
+function parseFirstExistingFileSync(fileNames, inputDir) {
+  var filePath = _lodash.default.chain(fileNames).map(function (filePath) {
+    return _path.default.resolve(inputDir, filePath);
+  }).find(function (filePath) {
+    return _fs.default.existsSync(filePath);
+  }).value();
+
+  if (filePath) {
+    return parseFileSync(filePath);
+  } else {
+    return null;
+  }
+}
+
 function parseFileSync(filePath) {
   var data = _fs.default.readFileSync(filePath, 'utf8');
 
@@ -2805,7 +3399,9 @@ function stringifyDataByFilePath(data, filePath) {
   switch (extension) {
     case 'yml':
     case 'yaml':
-      result = _jsYaml.default.safeDump(data);
+      result = _jsYaml.default.safeDump(data, {
+        noRefs: true
+      });
       break;
 
     case 'json':
@@ -2817,7 +3413,9 @@ function stringifyDataByFilePath(data, filePath) {
       break;
 
     case 'md':
-      result = '---\n' + _jsYaml.default.safeDump(data.frontmatter) + '---\n' + data.markdown;
+      result = '---\n' + _jsYaml.default.safeDump(data.frontmatter, {
+        noRefs: true
+      }) + '---\n' + data.markdown;
       break;
 
     default:
@@ -2902,6 +3500,16 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
 
   return result;
 }
+
+function flattenPageTree(pageTree) {
+  var pages = [];
+
+  _lodash.default.get(pageTree, 'folders', []).forEach(function (folder) {
+    pages = pages.concat(flattenPageTree(folder));
+  });
+
+  return pages.concat(_lodash.default.get(pageTree, 'pages', []));
+}
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -2927,6 +3535,10 @@ var _index = _interopRequireDefault(__webpack_require__(/*! ./index */ "./dist/u
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+var fail = _index.default.failFunctionWithTag('extendContentModels');
+
+var assert = _index.default.assertFunctionWithFail(fail);
+
 function mergeContentModelExtensions(models) {
   models = _lodash.default.cloneDeep(models);
   var extendedModelsByName = {};
@@ -2934,16 +3546,6 @@ function mergeContentModelExtensions(models) {
     model.name = modelName;
     return extendModel(model, models, extendedModelsByName);
   });
-}
-
-function fail(message) {
-  throw new Error("[extendContentModels] ".concat(message));
-}
-
-function assert(value, message) {
-  if (!value) {
-    fail(message);
-  }
 }
 
 function extendModel(model, models, extendedModelsByName) {
@@ -3119,7 +3721,8 @@ var StackbitYaml = _joi.default.object({
   templatesDir: _joi.default.string(),
   componentsDir: _joi.default.string(),
   sourceMapping: _joi.default.any(),
-  metadata: _joi.default.any()
+  metadata: _joi.default.any(),
+  stackbit_banner: _joi.default.any()
 });
 
 var PageModel = _joi.default.object({
@@ -3548,7 +4151,7 @@ function () {
     key: "assertModelMap",
     value: function assertModelMap(obj, models) {
       this.assert(!_lodash.default.isEmpty(models), "Couldn't find file in content model");
-      this.assert(_lodash.default.isEmpty(models) || models.length == 1, "Appears multiple times in content model");
+      this.assert(_lodash.default.isEmpty(models) || models.length === 1, "Appears multiple times in content model");
     }
   }, {
     key: "step",
@@ -3645,7 +4248,7 @@ function () {
 
       this.assertModelMap(dataFile, dataModels);
 
-      if (dataModels.length == 1) {
+      if (dataModels.length === 1) {
         var schema = new _schemaBuilder.default(dataModels[0], this.modelsByName, function (condition, message) {
           return _this4.assert(condition, message);
         }).build();
@@ -3659,7 +4262,7 @@ function () {
 
       this.assertModelMap(config, models);
 
-      if (models.length == 1) {
+      if (models.length === 1) {
         var schema = new _schemaBuilder.default(models[0], this.modelsByName, function (condition, message) {
           return _this5.assert(condition, message);
         }).build();
@@ -3674,7 +4277,7 @@ function () {
       var schema = new _schemaBuilder.default(model, this.modelsByName, function (condition, message) {
         return _this6.assert(condition, message);
       }).build();
-      this.validateSchema(page.relPath, _lodash.default.omit(page.params, ['template', 'menus']), schema);
+      this.validateSchema(page.relPath, _lodash.default.omit(page.params, [this.site.pageTemplateKey || 'template', 'menus']), schema);
       this.assert(!(model.hideContent && !_lodash.default.isEmpty(page.markdown)), "Unexpected content with \"hideContent: true\"");
 
       var pageTemplate = _lodash.default.get(page.params, this.site.pageTemplateKey);
@@ -3729,6 +4332,28 @@ module.exports = require("chalk");
 
 /***/ }),
 
+/***/ "chokidar":
+/*!***************************!*\
+  !*** external "chokidar" ***!
+  \***************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("chokidar");
+
+/***/ }),
+
+/***/ "events":
+/*!*************************!*\
+  !*** external "events" ***!
+  \*************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("events");
+
+/***/ }),
+
 /***/ "figures":
 /*!**************************!*\
   !*** external "figures" ***!
@@ -3759,6 +4384,17 @@ module.exports = require("fs");
 /***/ (function(module, exports) {
 
 module.exports = require("fs-extra");
+
+/***/ }),
+
+/***/ "http":
+/*!***********************!*\
+  !*** external "http" ***!
+  \***********************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("http");
 
 /***/ }),
 
@@ -3861,6 +4497,17 @@ module.exports = require("prettier");
 
 /***/ }),
 
+/***/ "sprintf-js":
+/*!*****************************!*\
+  !*** external "sprintf-js" ***!
+  \*****************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("sprintf-js");
+
+/***/ }),
+
 /***/ "strftime":
 /*!***************************!*\
   !*** external "strftime" ***!
@@ -3869,6 +4516,28 @@ module.exports = require("prettier");
 /***/ (function(module, exports) {
 
 module.exports = require("strftime");
+
+/***/ }),
+
+/***/ "url":
+/*!**********************!*\
+  !*** external "url" ***!
+  \**********************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("url");
+
+/***/ }),
+
+/***/ "ws":
+/*!*********************!*\
+  !*** external "ws" ***!
+  \*********************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("ws");
 
 /***/ }),
 

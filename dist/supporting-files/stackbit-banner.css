@@ -1,0 +1,150 @@
+body.has-theme-bar #page {
+  top: 60px;
+}
+@media only screen and (max-width: 801px) {
+  body.has-theme-bar #page {
+    top: 60px;
+  }
+}
+
+.theme-bar {
+  z-index: 1000;
+  position: relative;
+  height: 60px;
+  background: #031e34;
+  color: #ffffff;
+  box-sizing: border-box;
+  padding: 10px;
+  font-family: sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: normal;
+}
+.theme-bar.theme-bar-hidden {
+  display: none;
+}
+.theme-bar.theme-bar-fixed {
+  position: fixed;
+  width: 100%;
+  z-index: 1000;
+}
+.theme-bar.theme-bar-shadow {
+  box-shadow: 0 1px 6px 0 rgba(36, 50, 66, 0.15);
+}
+.theme-bar a,
+.theme-bar button {
+  text-decoration: none;
+  border: none;
+  color: inherit;
+  outline: none;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+  height: auto;
+  box-shadow: none;
+  cursor: pointer;
+}
+.theme-bar a:after,
+.theme-bar button:after {
+  content: '';
+  background: none;
+  height: auto;
+}
+.theme-bar .theme-bar-center {
+  display: flex;
+}
+.theme-bar .theme-bar-right {
+  display: flex;
+}
+.theme-bar .theme-bar-name {
+  font-size: 16px;
+  color: #ffffff;
+  font-weight: 500;
+}
+.theme-bar .theme-bar-button {
+  display: flex;
+  align-items: center;
+  padding: 6px 20px;
+  border-radius: 32px;
+  color: rgba(255, 255, 255, 0.8);
+  background-color: #031e34;
+  margin-left: 10px;
+  transition: border 0.3s ease, color 0.3s ease, background 0.3s ease;
+  box-shadow: none;
+  justify-content: center;
+  text-align: center;
+}
+.theme-bar .theme-bar-button:hover {
+  background-color: #02101c;
+  color: #ffffff;
+}
+.theme-bar .theme-bar-button.theme-bar-button-primary {
+  color: #fff;
+  min-width: 136px;
+  background: #0495f3 linear-gradient(#149bf3, #4f58fd);
+}
+.theme-bar .theme-bar-button.theme-bar-button-primary:hover {
+  background: #0495f3 linear-gradient(#1476f3, #634ffd);
+}
+@media only screen and (max-width: 801px) {
+  .theme-bar .theme-bar-button.theme-bar-button-primary {
+    min-width: auto;
+  }
+}
+.theme-bar .theme-bar-button.theme-bar-button-primary svg {
+  color: #fff;
+  width: 24px;
+  height: 24px;
+}
+.theme-bar .theme-bar-button.theme-bar-button-primary span {
+  margin-left: 10px;
+}
+.theme-bar .theme-bar-button.theme-bar-button-outlined {
+  padding: 4px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  min-width: 136px;
+}
+@media only screen and (max-width: 801px) {
+  .theme-bar .theme-bar-button.theme-bar-button-outlined {
+    min-width: auto;
+  }
+}
+.theme-bar .theme-bar-button.theme-bar-button-outlined:hover {
+  border: 1px solid #ffffff;
+}
+.theme-bar .theme-bar-button.theme-bar-button-link {
+  padding: 5px 0px;
+}
+.theme-bar .theme-bar-button.theme-bar-button-link:hover {
+  background-color: transparent;
+}
+.theme-bar .theme-bar-button svg {
+  vertical-align: middle;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+}
+@media only screen and (max-width: 801px) {
+  .theme-bar .theme-bar-button svg span {
+    display: none;
+  }
+}
+.theme-bar .theme-bar-button svg.remove-icon {
+  width: 24px;
+  height: 24px;
+}
+.theme-bar .theme-bar-button span {
+  vertical-align: middle;
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  margin-left: 8px;
+}
+@media only screen and (max-width: 801px) {
+  .theme-bar .theme-bar-button span {
+    display: none;
+  }
+}

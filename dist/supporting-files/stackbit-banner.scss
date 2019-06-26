@@ -1,0 +1,173 @@
+// sass stackbit-banner.scss stackbit-banner.css --sourcemap=none --style=expanded
+
+$theme-bar-bg-color: #031e34 !default; // Navy #031e34
+$theme-bar-text-color: #ffffff !default; // Navy #031e34
+$theme-bar-button-bg-color: $theme-bar-bg-color !default;
+$theme-bar-button-text-color: $theme-bar-text-color !default;
+$theme-bar-button-primary-text-color: #fff !default;
+$theme-bar-button-primary-bg-color: #0495f3 !default; // stackbit blue #0495f3
+$theme-bar-button-primary-gradient-start: #149bf3 !default; //stackbit gradient #149bf3
+$theme-bar-button-primary-gradient-end: #4f58fd !default; //stackbit gradient #4f58fd
+
+body.has-theme-bar {
+  #page {
+    top: 60px;
+  }
+  #page {
+    @media only screen and (max-width: 801px) {
+      top: 60px;
+    }
+  }
+}
+
+.theme-bar {
+  z-index: 1000; // attempt to handle fixed elements
+  position: relative; // attempt to handle fixed elements
+  height: 60px; // mainly a convienence for offsetting the themes body content, fixed headers etc
+  background: $theme-bar-bg-color;
+  color: $theme-bar-text-color;
+  box-sizing: border-box;
+  padding: 10px;
+  font-family: sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: normal;
+  &.theme-bar-hidden {
+    display: none;
+  }
+  &.theme-bar-fixed {
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+  }
+  &.theme-bar-shadow {
+    box-shadow: 0 1px 6px 0 rgba(36, 50, 66, 0.15);
+  }
+  a,
+  button {
+    text-decoration: none;
+    border: none;
+    color: inherit;
+    outline: none;
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
+    height: auto;
+    box-shadow: none;
+    cursor: pointer;
+    &:after {
+      content: '';
+      background: none;
+      height: auto;
+    }
+  }
+  .theme-bar-left {
+
+  }
+  .theme-bar-center {
+    display: flex;
+  }
+  .theme-bar-right {
+    display: flex;
+  }
+  .theme-bar-name {
+    font-size: 16px;
+    color: $theme-bar-text-color;
+    font-weight: 500;
+  }
+  // Buttons
+  .theme-bar-button {
+    display: flex;
+    align-items: center;
+    padding: 6px 20px;
+    border-radius: 32px;
+    color: rgba($theme-bar-button-text-color, 0.8);
+    background-color: $theme-bar-button-bg-color;
+    margin-left: 10px;
+    transition: border 0.3s ease, color 0.3s ease, background 0.3s ease;
+    box-shadow: none;
+    justify-content: center;
+    text-align: center;
+    &:hover {
+      background-color: darken($theme-bar-button-bg-color, 5%);
+      color: $theme-bar-button-text-color;
+    }
+    &.theme-bar-button-primary {
+      color: $theme-bar-button-primary-text-color;
+      min-width:136px;
+      background: $theme-bar-button-primary-bg-color
+        linear-gradient(
+          $theme-bar-button-primary-gradient-start,
+          $theme-bar-button-primary-gradient-end
+        );
+      &:hover {
+        background: $theme-bar-button-primary-bg-color
+          linear-gradient(
+            adjust-hue($theme-bar-button-primary-gradient-start, 10%),
+            adjust-hue($theme-bar-button-primary-gradient-end, 10%)
+          );
+      }
+      @media only screen and (max-width: 801px) {
+        min-width: auto;
+      }
+      svg {
+        color: $theme-bar-button-primary-text-color;
+        width: 24px;
+        height: 24px;
+      }
+      span {
+        margin-left: 10px
+      }
+    }
+    &.theme-bar-button-outlined {
+      padding: 4px 20px;
+      border: 1px solid rgba($theme-bar-button-text-color, 0.8);
+      min-width: 136px;
+      @media only screen and (max-width: 801px) {
+        min-width: auto;
+      }
+      &:hover {
+        border: 1px solid $theme-bar-button-text-color;
+      }
+    }
+    &.theme-bar-button-link {
+      padding: 5px 0px;
+      &:hover {
+        background-color: transparent;
+      }
+    }
+    svg {
+      vertical-align: middle;
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      path {
+        // fill: #000;
+      }
+      @media only screen and (max-width: 801px) {
+        span {
+          display: none;
+        }
+      }
+      &.remove-icon {
+        width: 24px;
+        height: 24px;
+      }
+    }
+    span {
+      vertical-align: middle;
+      display: inline-block;
+      margin: 0;
+      padding: 0;
+      margin-left: 8px;
+    }
+    @media only screen and (max-width: 801px) {
+      span {
+        display: none;
+      }
+    }
+  }
+}
