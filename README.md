@@ -6,6 +6,10 @@ The following conversions are currently supported by Stackbit:
 * **Static Site Generators**: Jekyll, Hugo, Gatsby
 * **Headless CMS**: Forestry, Netlify CMS, DatoCMS, Contentful
 
+## Documentation
+
+[Unibit Documentation](https://docs.stackbit.com/)
+
 ## Quickstart
 
 ```
@@ -14,7 +18,7 @@ npm install -g @stackbit/unibit
 
 Create a starter site.
 ```
-unibit init mysite
+unibit init
 ```
 
 Start the local development server. 
@@ -29,6 +33,3 @@ Compile a production build into the `public` folder.
 unibit build
 ```
 
-## Documentation
-
-[Unibit Documentation](https://docs.stackbit.com/)
