@@ -8,7 +8,7 @@ The following conversions are currently supported by Stackbit:
 
 ## Documentation
 
-[Unibit Documentation](https://docs.stackbit.com/)
+[Unibit Documentation](https://docs.stackbit.com/unibit)
 
 ## Quickstart
 
