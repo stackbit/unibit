@@ -139,15 +139,21 @@ function () {
     var stackbitYamlPath = _utils.default.getFirstExistingFileSync(_consts.default.STACKBIT_YAML_NAMES, this.inputDir);
 
     this.stackbitYamlFileName = _path.default.basename(stackbitYamlPath);
-    this.stackbitYaml = this.loadStackbitYaml(stackbitYamlPath);
-    options = _lodash.default.assign({}, _lodash.default.cloneDeep(this.ssgConsts()), _lodash.default.pick(this.stackbitYaml, ['ssgName', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'pageTemplateKey', 'templatesDir', 'componentsDir']), options);
+    this.stackbitYaml = this.loadStackbitYaml(stackbitYamlPath); // for backward compatibility
+
+    if (_lodash.default.has(this.stackbitYaml, 'templatesDir')) {
+      this.stackbitYaml.layoutsDir = this.stackbitYaml.templatesDir;
+      delete this.stackbitYaml.templatesDir;
+    }
+
+    options = _lodash.default.assign({}, _lodash.default.cloneDeep(this.ssgConsts()), _lodash.default.pick(this.stackbitYaml, ['ssgName', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'pageTemplateKey', 'layoutsDir', 'componentsDir']), options);
     this.ssgName = _lodash.default.get(options, 'ssgName');
     this.configFilePath = _lodash.default.get(options, 'configFilePath');
     this.dataDir = _lodash.default.get(options, 'dataDir');
     this.pagesDir = _lodash.default.get(options, 'pagesDir');
     this.staticDir = _lodash.default.get(options, 'staticDir');
     this.pageTemplateKey = _lodash.default.get(options, 'pageTemplateKey');
-    this.templatesDir = _path.default.resolve(this.inputDir, _lodash.default.get(options, 'templatesDir'));
+    this.layoutsDir = _path.default.resolve(this.inputDir, _lodash.default.get(options, 'layoutsDir'));
     this.componentsDir = _path.default.resolve(this.inputDir, _lodash.default.get(options, 'componentsDir'));
     this.publishDir = _lodash.default.get(options, 'publishDir');
     this.buildCommand = _lodash.default.get(options, 'buildCommand');
@@ -197,7 +203,7 @@ function () {
         stackbitYamlFileName: this.stackbitYamlFileName,
         stackbitYaml: this.stackbitYaml,
         dataFiles: this.loadData(),
-        templates: this.loadTemplates(),
+        layouts: this.loadLayouts(),
         components: this.loadComponents(),
         pageTree: this.loadPages()
       };
@@ -272,15 +278,15 @@ function () {
       return dataFiles;
     }
   }, {
-    key: "loadTemplates",
-    value: function loadTemplates() {
-      console.log("[".concat(this.constructor.name, "] loading templates from: ").concat(this.templatesDir));
-      return this.loadFiles(this.templatesDir);
+    key: "loadLayouts",
+    value: function loadLayouts() {
+      console.log("[".concat(this.constructor.name, "] loading layouts from: ").concat(this.layoutsDir));
+      return this.loadFiles(this.layoutsDir);
     }
   }, {
     key: "loadComponents",
     value: function loadComponents() {
-      console.log("[".concat(this.constructor.name, "] loading templates from: ").concat(this.componentsDir));
+      console.log("[".concat(this.constructor.name, "] loading components from: ").concat(this.componentsDir));
       return this.loadFiles(this.componentsDir);
     }
   }, {
@@ -879,6 +885,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
+var _fsExtra = _interopRequireDefault(__webpack_require__(/*! fs-extra */ "fs-extra"));
+
 var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
@@ -920,10 +928,22 @@ var UnibitLoader =
 function (_BaseLoader) {
   _inherits(UnibitLoader, _BaseLoader);
 
-  function UnibitLoader() {
+  function UnibitLoader(options) {
+    var _this;
+
     _classCallCheck(this, UnibitLoader);
 
-    return _possibleConstructorReturn(this, _getPrototypeOf(UnibitLoader).apply(this, arguments));
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(UnibitLoader).call(this, options)); // For backward compatibility check if theme has templates folder instead layouts
+
+    if (!_fsExtra.default.pathExistsSync(_this.layoutsDir)) {
+      var templatesPath = _path.default.resolve(_this.inputDir, 'templates');
+
+      if (_fsExtra.default.pathExistsSync(templatesPath)) {
+        _this.layoutsDir = templatesPath;
+      }
+    }
+
+    return _this;
   }
 
   _createClass(UnibitLoader, [{
@@ -932,27 +952,27 @@ function (_BaseLoader) {
       return _ssgConsts.UNIBIT;
     }
   }, {
-    key: "loadTemplates",
-    value: function loadTemplates() {
-      var templates = _get(_getPrototypeOf(UnibitLoader.prototype), "loadTemplates", this).call(this);
+    key: "loadLayouts",
+    value: function loadLayouts() {
+      var layouts = _get(_getPrototypeOf(UnibitLoader.prototype), "loadLayouts", this).call(this);
 
-      var baseLayoutFilePath = _path.default.resolve(this.templatesDir, _ssgConsts.BASE_TEMPLATE_FILE_NAME);
+      var baseLayoutFilePath = _path.default.resolve(this.layoutsDir, _ssgConsts.BASE_LAYOUT_FILE_NAME);
 
       var pathObject = _path.default.parse(baseLayoutFilePath);
 
-      templates.push({
+      layouts.push({
         absPath: baseLayoutFilePath,
-        relPath: _path.default.relative(this.templatesDir, baseLayoutFilePath),
+        relPath: _path.default.relative(this.layoutsDir, baseLayoutFilePath),
         basename: pathObject.base,
         filename: pathObject.name,
         data: _base.default
       });
-      return templates;
+      return layouts;
     }
   }, {
     key: "getSiteMenus",
     value: function getSiteMenus(data) {
-      var _this = this;
+      var _this2 = this;
 
       var menus = _lodash.default.get(data.config.data, 'menus', null);
 
@@ -970,11 +990,11 @@ function (_BaseLoader) {
 
           var weight = _lodash.default.get(item, 'weight', null);
 
-          _this.assert(url, "menu item defined in config file must have \"url\" field");
+          _this2.assert(url, "menu item defined in config file must have \"url\" field");
 
-          _this.assert(title, "menu item defined in config file must have \"title\" field");
+          _this2.assert(title, "menu item defined in config file must have \"title\" field");
 
-          _this.assert(identifier, "menu item defined in config file must have \"identifier\" field");
+          _this2.assert(identifier, "menu item defined in config file must have \"identifier\" field");
 
           var menuItem = {
             menu: menuName,
@@ -1030,7 +1050,7 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var siteProps = ['absPath', 'ssgName', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'templates', 'components', 'pageTree', 'menus', 'menuNames', 'menusByName'];
+var siteProps = ['absPath', 'ssgName', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menus', 'menuNames', 'menusByName'];
 /**
  * @class Site
  *
@@ -1044,7 +1064,7 @@ var siteProps = ['absPath', 'ssgName', 'staticDir', 'dataDir', 'pagesDir', 'page
  * @property {string} stackbitYamlFileName
  * @property {object} stackbitYaml
  * @property {array} dataFiles
- * @property {array} templates
+ * @property {array} layouts
  * @property {array} components
  * @property {object} pageTree
  * @property {object} menus
@@ -1218,6 +1238,7 @@ if (command === 'build' || command === 'develop') {
     process.exit(1);
   }
 }
+
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -1237,7 +1258,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.ssgConstsForSSGType = ssgConstsForSSGType;
 exports.configModelTransformerForSSGType = configModelTransformerForSSGType;
-exports.BUILD_SCRIPT = exports.UNIBIT = exports.GATSBY = exports.HUGO = exports.JEKYLL = exports.BODY_TEMPLATE_FILE_NAME = exports.BASE_TEMPLATE_FILE_NAME = exports.POST_BODY_COMPONENT_FILE_NAME = exports.HTML_HEAD_COMPONENT_FILE_NAME = exports.SSG_TYPES = void 0;
+exports.BUILD_SCRIPT = exports.UNIBIT = exports.GATSBY = exports.HUGO = exports.JEKYLL = exports.BODY_LAYOUT_FILE_NAME = exports.BASE_LAYOUT_FILE_NAME = exports.POST_BODY_COMPONENT_FILE_NAME = exports.HTML_HEAD_COMPONENT_FILE_NAME = exports.SSG_TYPES = void 0;
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
@@ -1261,10 +1282,10 @@ var HTML_HEAD_COMPONENT_FILE_NAME = 'html_head.html';
 exports.HTML_HEAD_COMPONENT_FILE_NAME = HTML_HEAD_COMPONENT_FILE_NAME;
 var POST_BODY_COMPONENT_FILE_NAME = 'post_body.html';
 exports.POST_BODY_COMPONENT_FILE_NAME = POST_BODY_COMPONENT_FILE_NAME;
-var BASE_TEMPLATE_FILE_NAME = 'base.html';
-exports.BASE_TEMPLATE_FILE_NAME = BASE_TEMPLATE_FILE_NAME;
-var BODY_TEMPLATE_FILE_NAME = 'body.html';
-exports.BODY_TEMPLATE_FILE_NAME = BODY_TEMPLATE_FILE_NAME;
+var BASE_LAYOUT_FILE_NAME = 'base.html';
+exports.BASE_LAYOUT_FILE_NAME = BASE_LAYOUT_FILE_NAME;
+var BODY_LAYOUT_FILE_NAME = 'body.html';
+exports.BODY_LAYOUT_FILE_NAME = BODY_LAYOUT_FILE_NAME;
 var BUILD_SCRIPT = './ssg-build.sh';
 exports.BUILD_SCRIPT = BUILD_SCRIPT;
 var JEKYLL = {
@@ -1278,7 +1299,7 @@ var JEKYLL = {
   pageTemplateKey: 'layout',
   pageMenusKey: 'menus',
   pageMenuTitleKey: 'title',
-  templatesDir: '_layouts',
+  layoutsDir: '_layouts',
   componentsDir: '_includes',
   publishDir: '_site',
   buildCommand: 'jekyll build',
@@ -1307,7 +1328,7 @@ var HUGO = {
   pageTemplateKey: 'layout',
   pageMenusKey: 'menu',
   pageMenuTitleKey: 'name',
-  templatesDir: 'layouts/_default',
+  layoutsDir: 'layouts/_default',
   componentsDir: 'layouts/partials',
   publishDir: 'public',
   buildCommand: 'hugo',
@@ -1342,7 +1363,7 @@ var GATSBY = {
   pageTemplateKey: 'template',
   pageMenusKey: 'menus',
   pageMenuTitleKey: 'title',
-  templatesDir: 'src/templates',
+  layoutsDir: 'src/templates',
   componentsDir: 'src/components',
   publishDir: 'public',
   buildCommand: 'gatsby build',
@@ -1373,7 +1394,7 @@ var UNIBIT = {
   pageTemplateKey: 'template',
   pageMenusKey: 'menus',
   pageMenuTitleKey: 'title',
-  templatesDir: 'templates',
+  layoutsDir: 'layouts',
   componentsDir: 'components',
   publishDir: 'output',
   buildCommand: 'unibit build',
@@ -2086,7 +2107,8 @@ var watcher = function watcher(options) {
     var eventEmitter = new _events.default();
 
     var watcher = _chokidar.default.watch(_path.default.resolve(inputDir), {
-      ignoreInitial: true
+      ignoreInitial: true,
+      ignored: outputDir
     });
 
     watcher.on('change', function (filePath) {
@@ -2106,6 +2128,7 @@ var watcher = function watcher(options) {
 };
 
 module.exports = watcher;
+
 //# sourceMappingURL=live-reload.js.map
 
 /***/ }),
@@ -2657,7 +2680,7 @@ function () {
   }, {
     key: "loadNunjucksEnv",
     value: function loadNunjucksEnv() {
-      var fileSystemLoader = new _nunjucks.default.FileSystemLoader([this.loader.templatesDir, this.loader.componentsDir]);
+      var fileSystemLoader = new _nunjucks.default.FileSystemLoader([this.loader.layoutsDir, this.loader.componentsDir]);
       this.env = new _nunjucks.default.Environment([fileSystemLoader, new _unibitNunjucksLoader.default()]);
       this.env.addFilter('relative_url', _lodash.default.partial(filters.relativeUrl, {
         config: this.config,
@@ -2896,6 +2919,7 @@ function () {
 
   return LinkExtension;
 }();
+
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -3719,6 +3743,8 @@ var StackbitYaml = _joi.default.object({
   pagesDir: _joi.default.string(),
   pageTemplateKey: _joi.default.string(),
   templatesDir: _joi.default.string(),
+  // left for backward compatibility with new layoutsDir
+  layoutsDir: _joi.default.string(),
   componentsDir: _joi.default.string(),
   sourceMapping: _joi.default.any(),
   metadata: _joi.default.any(),
