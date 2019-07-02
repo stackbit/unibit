@@ -3,7 +3,9 @@
     if (!WebSocket) return;
 
     var connect = function(){
-        var connection = new WebSocket('ws://localhost:' + location.port);
+        var isSecure = window.location.protocol.indexOf('https') >= 0;
+        var protocol = isSecure ? 'wss' : 'ws';
+        var connection = new WebSocket(protocol + '://' + location.host);
         connection.onmessage = function() {
             window.location.reload();
         };

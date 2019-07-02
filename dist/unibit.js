@@ -87,6 +87,66 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./dist/downloader/index.js":
+/*!**********************************!*\
+  !*** ./dist/downloader/index.js ***!
+  \**********************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = download;
+
+var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
+
+var _fs = _interopRequireDefault(__webpack_require__(/*! fs */ "fs"));
+
+var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _ora = _interopRequireDefault(__webpack_require__(/*! ora */ "ora"));
+
+var _downloadGitRepo = _interopRequireDefault(__webpack_require__(/*! download-git-repo */ "download-git-repo"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function download(repository, name) {
+  var destination = _path.default.resolve(process.cwd(), name);
+
+  var spinner = (0, _ora.default)("Creating new site into ".concat(destination)).start();
+
+  if (_fs.default.existsSync(destination)) {
+    spinner.fail("Could not create new site. Directory already exists at ".concat(destination, "!"));
+    process.exit(1);
+  } // Use of a personal access token is currently required
+  // as the universal theme is in a private repo
+  // once public we can remove this code
+
+
+  var personalAccessToken = _lodash.default.get(process.env, 'STACKBIT_PERSONAL_ACCESS_TOKEN', null);
+
+  var options = {
+    headers: {
+      Authorization: "token ".concat(personalAccessToken)
+    }
+  };
+  (0, _downloadGitRepo.default)(repository, name, options, function (err) {
+    if (err) {
+      spinner.fail('Could not create new site. Please try again');
+      process.exit(1);
+    } else {
+      spinner.succeed("New site created into ".concat(destination));
+    }
+  });
+}
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
 /***/ "./dist/loaders/base-loader.js":
 /*!*************************************!*\
   !*** ./dist/loaders/base-loader.js ***!
@@ -207,15 +267,7 @@ function () {
         components: this.loadComponents(),
         pageTree: this.loadPages()
       };
-
-      var _this$createMenus = this.createMenus(data),
-          menus = _this$createMenus.menus,
-          menuNames = _this$createMenus.menuNames,
-          menusByName = _this$createMenus.menusByName;
-
-      data.menus = menus;
-      data.menuNames = menuNames;
-      data.menusByName = menusByName;
+      data.menuItems = this.createMenuItems(data);
       return new _site.default(data);
     }
   }, {
@@ -433,14 +485,11 @@ function () {
       });
     }
   }, {
-    key: "createMenus",
-    value: function createMenus(data) {
+    key: "createMenuItems",
+    value: function createMenuItems(data) {
       var siteMenuItems = this.getSiteMenus(data);
       var pageMenuItems = this.getPageMenus(data);
-
-      var menuItems = _lodash.default.chain(siteMenuItems).concat(pageMenuItems).compact().value();
-
-      return this.createMenusFromMenuItems(menuItems);
+      return _lodash.default.chain(siteMenuItems).concat(pageMenuItems).compact().value();
     }
   }, {
     key: "getSiteMenus",
@@ -483,63 +532,6 @@ function () {
           page: page
         };
       });
-    }
-  }, {
-    key: "createMenusFromMenuItems",
-    value: function createMenusFromMenuItems(menuItems) {
-      var _this4 = this;
-
-      var rootMenus = {};
-      var menusByName = {};
-      var menuNames = [];
-
-      _lodash.default.forEach(menuItems, function (menuItem) {
-        var menuName = menuItem.menu;
-
-        var identifier = _lodash.default.get(menuItem, 'identifier');
-
-        var menu;
-
-        if (!_lodash.default.includes(menuNames, menuName)) {
-          menuNames.push(menuName);
-        }
-
-        if (!_lodash.default.has(menusByName, menuName)) {
-          menu = [];
-          rootMenus[menuName] = menu;
-          menusByName[menuName] = menu;
-        } else {
-          menu = menusByName[menuName];
-        }
-
-        menuItem.children = []; // In case a menu item with a parent menu was defined before the item
-        // with the menu identifier, copy that menu to menu item's children.
-
-        if (_lodash.default.has(menusByName, identifier)) {
-          if (_lodash.default.has(rootMenus, identifier)) {
-            menuItem.children = rootMenus[identifier];
-            delete rootMenus[identifier];
-          } else {
-            _this4.fail("A menu item identifier must be unique");
-          }
-        }
-
-        menusByName[identifier] = menuItem.children;
-
-        if (_lodash.default.has(menuItem, 'weight')) {
-          var index = _lodash.default.sortedLastIndexBy(menu, menuItem, 'weight');
-
-          menu.splice(index, 0, menuItem);
-        } else {
-          menu.push(menuItem);
-        }
-      });
-
-      return {
-        menus: rootMenus,
-        menusByName: menusByName,
-        menuNames: menuNames
-      };
     }
   }]);
 
@@ -1050,7 +1042,7 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var siteProps = ['absPath', 'ssgName', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menus', 'menuNames', 'menusByName'];
+var siteProps = ['absPath', 'ssgName', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menuItems'];
 /**
  * @class Site
  *
@@ -1108,6 +1100,8 @@ function () {
     value: function addComputedProperties(siteData) {
       siteData.pages = _utils.default.flattenPageTree(siteData.pageTree);
       siteData.data = this.mergeData(siteData.dataFiles);
+
+      _lodash.default.merge(siteData, this.createMenusFromMenuItems(siteData.menuItems));
     }
   }, {
     key: "mergeData",
@@ -1125,9 +1119,66 @@ function () {
       return data;
     }
   }, {
+    key: "createMenusFromMenuItems",
+    value: function createMenusFromMenuItems(menuItems) {
+      var _this2 = this;
+
+      var rootMenus = {};
+      var menusByName = {};
+      var menuNames = [];
+
+      _lodash.default.forEach(menuItems, function (menuItem) {
+        var menuName = menuItem.menu;
+
+        var identifier = _lodash.default.get(menuItem, 'identifier');
+
+        var menu;
+
+        if (!_lodash.default.includes(menuNames, menuName)) {
+          menuNames.push(menuName);
+        }
+
+        if (!_lodash.default.has(menusByName, menuName)) {
+          menu = [];
+          rootMenus[menuName] = menu;
+          menusByName[menuName] = menu;
+        } else {
+          menu = menusByName[menuName];
+        }
+
+        menuItem.children = []; // In case a menu item with a parent menu was defined before the item
+        // with the menu identifier, copy that menu to menu item's children.
+
+        if (_lodash.default.has(menusByName, identifier)) {
+          if (_lodash.default.has(rootMenus, identifier)) {
+            menuItem.children = rootMenus[identifier];
+            delete rootMenus[identifier];
+          } else {
+            _this2.fail("A menu item identifier must be unique");
+          }
+        }
+
+        menusByName[identifier] = menuItem.children;
+
+        if (_lodash.default.has(menuItem, 'weight')) {
+          var index = _lodash.default.sortedLastIndexBy(menu, menuItem, 'weight');
+
+          menu.splice(index, 0, menuItem);
+        } else {
+          menu.push(menuItem);
+        }
+      });
+
+      return {
+        menus: rootMenus,
+        menusByName: menusByName,
+        menuNames: menuNames
+      };
+    }
+  }, {
     key: "clonePageTree",
     value: function clonePageTree(pageTree) {
-      var _this2 = this;
+      var _this3 = this;
 
       if (!pageTree) {
         return null;
@@ -1143,7 +1194,7 @@ function () {
       var folders = [];
       pageTree.folders.forEach(function (folder) {
         // let folderName = path.relative(pageTree.path, folder.path);
-        var clone = _this2.clonePageTree(folder);
+        var clone = _this3.clonePageTree(folder);
 
         folders.push(clone); // folders[folderName] = clone;
       });
@@ -1183,6 +1234,8 @@ var _validator = _interopRequireDefault(__webpack_require__(/*! ../validator/val
 
 var _consoleRenderer = _interopRequireDefault(__webpack_require__(/*! ../validator/console-renderer */ "./dist/validator/console-renderer.js"));
 
+var _downloader = _interopRequireDefault(__webpack_require__(/*! ../downloader */ "./dist/downloader/index.js"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var inputDirOption = {
@@ -1210,11 +1263,21 @@ var buildOptions = function buildOptions(yargs) {
       boolean: true,
       default: false,
       defaultDescription: 'Displays the Stackbit theme banner'
+    },
+    'ugly-urls': {
+      describe: 'Generate ugly urls',
+      boolean: true,
+      defaultDescription: 'When this flag is missing, Unibit generates pretty URLs by default, unless uglyUrls defined in config.yml'
     }
-  });
+  }).alias('h', 'help');
 };
 
-var argv = _yargs.default.usage('Usage: $0 <command> [options]').command('build', 'Build site', buildOptions).command('develop', 'Develop site', buildOptions).command('validate', 'Validate theme', function (yargs) {
+var argv = _yargs.default.usage('Usage: $0 <command> [options]').command('build', 'Build site', buildOptions).command('develop', 'Develop site', buildOptions).command('init [path]', 'Initialize new site', function (yargs) {
+  yargs.positional('path', {
+    describe: 'Initializes new starter site in the provided directory',
+    default: 'unibit-universal'
+  });
+}).command('validate', 'Validate theme', function (yargs) {
   return yargs.options({
     'input-dir': inputDirOption
   });
@@ -1227,6 +1290,7 @@ if (command === 'build' || command === 'develop') {
     inputDir: argv.inputDir,
     outputDir: argv.outputDir,
     withBanner: argv.withBanner,
+    uglyUrls: argv.uglyUrls,
     watch: command === 'develop'
   });
   unibit.generate();
@@ -1237,8 +1301,9 @@ if (command === 'build' || command === 'develop') {
   if (!validator.isValid()) {
     process.exit(1);
   }
+} else if (command === 'init') {
+  new _downloader.default('github:stackbithq/stackbit-theme-universal', argv.path);
 }
-
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -1764,7 +1829,6 @@ function pushIfNotExistsByField(arr, items) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.relativeUrl = relativeUrl;
 exports.dateFormat = dateFormat;
 exports.sprintf = sprintf;
 exports.sliceArray = sliceArray;
@@ -1782,36 +1846,9 @@ var _moment = _interopRequireDefault(__webpack_require__(/*! moment */ "moment")
 
 var _sprintfJs = _interopRequireDefault(__webpack_require__(/*! sprintf-js */ "sprintf-js"));
 
-var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
-
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
-var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var fail = _utils.default.failFunctionWithTag('UnibitFilters');
-
-var assert = _utils.default.assertFunctionWithFail(fail);
-
-function relativeUrl(context, url) {
-  if (_lodash.default.startsWith(url, '#') || _lodash.default.startsWith(url, 'http')) {
-    return url;
-  }
-
-  var urlsRelativeToBase = _lodash.default.get(context.config, 'urls_relative_to_base', true);
-
-  if (!urlsRelativeToBase && !_lodash.default.startsWith(url, '/')) {
-    var pageDir = _path.default.parse(context.renderingPage.outputUrl).dir;
-
-    assert(!_lodash.default.startsWith(pageDir, '/'), "error in relativeUrl, page dir can not be absolute");
-    return _path.default.relative(pageDir, url);
-  } else {
-    var baseUrl = _lodash.default.get(context.config, 'baseurl', '');
-
-    return _path.default.join(baseUrl, '/', url);
-  }
-}
 
 function dateFormat(date, format, type) {
   type = _lodash.default.defaultTo(type, 'strftime');
@@ -1957,15 +1994,9 @@ var serve = function serve(filesDir, req, res) {
 
   var pathname = _path.default.join(_path.default.resolve(filesDir), sanitizePath);
 
-  _fsExtra.default.exists(pathname).then(function (exist) {
-    if (!exist) {
-      throw 404;
-    }
-
-    return _fsExtra.default.stat(pathname);
-  }).then(function (stat) {
+  _fsExtra.default.stat(pathname).then(function (stat) {
     if (stat.isDirectory()) {
-      pathname += 'index.html';
+      pathname = _path.default.join(pathname, 'index.html');
     }
 
     return _fsExtra.default.readFile(pathname);
@@ -1975,7 +2006,7 @@ var serve = function serve(filesDir, req, res) {
     res.setHeader('Content-type', mimeType[ext] || 'text/plain');
     res.end(data);
   }).catch(function (err) {
-    if (err === 404) {
+    if (err && err.code === 'ENOENT') {
       res.statusCode = 404;
       res.end("File ".concat(pathname, " not found!"));
       return;
@@ -2128,7 +2159,6 @@ var watcher = function watcher(options) {
 };
 
 module.exports = watcher;
-
 //# sourceMappingURL=live-reload.js.map
 
 /***/ }),
@@ -2339,6 +2369,10 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -2354,8 +2388,9 @@ function () {
     this.prettierOptions = _lodash.default.get(options, 'prettier');
     this.inputDir = _lodash.default.get(options, 'inputDir');
     this.outputDir = _lodash.default.get(options, 'outputDir', 'output');
+    this.uglyUrls = _lodash.default.get(options, 'uglyUrls');
     this.inputConfig = _lodash.default.get(options, 'config', {});
-    this.withBanner = _lodash.default.get(options, 'withBanner', false);
+    this.withBanner = _lodash.default.get(options, 'withBanner');
     this.watch = _lodash.default.get(options, 'watch', false);
     console.log("Unibit: generating site into ".concat(_path.default.resolve(this.outputDir)));
 
@@ -2376,10 +2411,20 @@ function () {
       this.loader = new _unibitLoader.default({
         inputDir: this.inputDir
       });
-      this.site = this.loader.loadSite();
-      this.config = _lodash.default.merge({}, this.site.config.data, this.inputConfig);
+      var site = this.loader.loadSite();
+
+      var configData = _lodash.default.merge({}, site.config.data, this.inputConfig);
+
+      var uglyUrls = typeof this.uglyUrls === 'boolean' ? this.uglyUrls : _lodash.default.get(configData, 'ugly_urls', false);
+      this.site = site.clone({
+        config: _lodash.default.assign({}, site.config, {
+          data: configData
+        }),
+        pageTree: uglyUrls ? site.pageTree : this.processPageTree(_lodash.default.cloneDeep(site.pageTree)),
+        menuItems: uglyUrls ? site.menuItems : site.menuItems.map(this.processUrl)
+      });
       this.pages = _lodash.default.cloneDeep(this.site.pages);
-      this.showBanner = _lodash.default.get(this.site, 'stackbitYaml.stackbit_banner.show_banner', false) || this.withBanner;
+      this.showBanner = typeof this.withBanner === 'boolean' ? this.withBanner : _lodash.default.get(this.site, 'stackbitYaml.stackbit_banner.show_banner', false);
       this.loadNunjucksEnv();
     }
   }, {
@@ -2455,6 +2500,35 @@ function () {
       });
     }
   }, {
+    key: "processPageTree",
+    value: function processPageTree(folder) {
+      var pages = folder.pages.map(this.processUrl, this);
+      var folders = folder.folders.map(this.processPageTree, this);
+      return _objectSpread({}, folder, {
+        pages: pages,
+        folders: folders
+      });
+    }
+  }, {
+    key: "processUrl",
+    value: function processUrl(currentItem) {
+      var item = _lodash.default.cloneDeep(currentItem);
+
+      var url = item.url;
+
+      var pathComponents = _path.default.parse(item.url);
+
+      if (url.match(/^index\.\w+$/)) {
+        item.url = '';
+      } else if (pathComponents.name !== 'index') {
+        item.url = [pathComponents.dir, pathComponents.name].filter(function (p) {
+          return p;
+        }).join(_path.default.sep) + _path.default.sep;
+      }
+
+      return item;
+    }
+  }, {
     key: "copySupportingFiles",
     value: function copySupportingFiles() {
       if (this.showBanner) {
@@ -2477,7 +2551,9 @@ function () {
   }, {
     key: "compileSass",
     value: function compileSass() {
-      var sassOptions = _lodash.default.get(this.config, 'sass', null);
+      var config = this.site.config.data;
+
+      var sassOptions = _lodash.default.get(config, 'sass', null);
 
       if (sassOptions) {
         var inputFile = _lodash.default.get(sassOptions, 'input_file', null);
@@ -2498,7 +2574,7 @@ function () {
           inputData = _fs.default.readFileSync(inputFile, 'utf8');
           inputData = this.env.renderString(inputData, {
             site: {
-              params: this.config.params
+              params: config.params
             }
           });
           inputFile = null;
@@ -2525,7 +2601,7 @@ function () {
         page.content = _this3.markdownify(page.markdown);
       });
       var pages = this.pages.filter(function (page) {
-        return _lodash.default.get(_this3.config.output, page.relDir, true);
+        return _lodash.default.get(_this3.site.config.data.output, page.relDir, true);
       });
       var pageTree = this.mapFolders(this.site.pageTree);
       console.log('Unibit: generating ' + pages.length + ' pages...');
@@ -2571,7 +2647,7 @@ function () {
     key: "createPageContext",
     value: function createPageContext(page, pageTree) {
       // console.log('Unibit: generating page for ' + page.relPath);
-      var config = this.config;
+      var config = this.site.config.data;
       var stackbitYaml = this.site.stackbitYaml;
       var env = this.env;
       var context = {
@@ -2617,7 +2693,7 @@ function () {
       return _lodash.default.assign({
         show_banner: this.showBanner,
         component: 'stackbit-banner.html',
-        name: this.config.title,
+        name: this.site.config.data.title,
         launch_url: "http://app.stackbit.com/wizard",
         github_url: ""
       }, stackbitBanner);
@@ -2632,10 +2708,11 @@ function () {
     }
   }, {
     key: "renderAndSavePage",
-    value: function renderAndSavePage(context, outputUrl) {
+    value: function renderAndSavePage(context, url) {
       var _this5 = this;
 
       this.assert(this.renderingPage === null, "Unibit: tying to generate two pages in parallel");
+      var outputUrl = url.match(/\w+\.\w+$/) ? url : _path.default.join(url, 'index.html');
       this.renderingPage = {
         context: context,
         outputUrl: outputUrl
@@ -2682,10 +2759,7 @@ function () {
     value: function loadNunjucksEnv() {
       var fileSystemLoader = new _nunjucks.default.FileSystemLoader([this.loader.layoutsDir, this.loader.componentsDir]);
       this.env = new _nunjucks.default.Environment([fileSystemLoader, new _unibitNunjucksLoader.default()]);
-      this.env.addFilter('relative_url', _lodash.default.partial(filters.relativeUrl, {
-        config: this.config,
-        renderingPage: this.renderingPage
-      }));
+      this.env.addFilter('relative_url', this.relativeUrl.bind(this));
       this.env.addFilter('date_format', filters.dateFormat);
       this.env.addFilter('sprintf', filters.sprintf);
       this.env.addFilter('slice_array', filters.sliceArray);
@@ -2814,11 +2888,31 @@ function () {
       return pages[0];
     }
   }, {
+    key: "relativeUrl",
+    value: function relativeUrl(url) {
+      if (_lodash.default.startsWith(url, '#') || _lodash.default.startsWith(url, 'http')) {
+        return url;
+      }
+
+      var urlsRelativeToBase = _lodash.default.get(this.site.config.data, 'urls_relative_to_base', true);
+
+      if (!urlsRelativeToBase && !_lodash.default.startsWith(url, '/')) {
+        var pageDir = _path.default.parse(this.renderingPage.outputUrl).dir;
+
+        this.assert(!_lodash.default.startsWith(pageDir, '/'), "error in relativeUrl, page dir can not be absolute");
+        return _path.default.relative(pageDir, url);
+      } else {
+        var baseUrl = _lodash.default.get(this.site.config.data, 'baseurl', '');
+
+        return _path.default.join(baseUrl, '/', url);
+      }
+    }
+  }, {
     key: "markdownify",
     value: function markdownify(str) {
       if (_lodash.default.isString(str)) {
         return this.env.filters.safe((0, _marked.default)(str, {
-          baseUrl: this.config.baseurl
+          baseUrl: this.site.config.data.baseurl
         }));
       } else {
         return str;
@@ -2919,7 +3013,6 @@ function () {
 
   return LinkExtension;
 }();
-
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -4369,6 +4462,17 @@ module.exports = require("chokidar");
 
 /***/ }),
 
+/***/ "download-git-repo":
+/*!************************************!*\
+  !*** external "download-git-repo" ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("download-git-repo");
+
+/***/ }),
+
 /***/ "events":
 /*!*************************!*\
   !*** external "events" ***!
@@ -4498,6 +4602,17 @@ module.exports = require("node-sass");
 /***/ (function(module, exports) {
 
 module.exports = require("nunjucks");
+
+/***/ }),
+
+/***/ "ora":
+/*!**********************!*\
+  !*** external "ora" ***!
+  \**********************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require("ora");
 
 /***/ }),
 
