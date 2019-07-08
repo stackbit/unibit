@@ -19,10 +19,10 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
       <span>Fork</span>
     </a>
     {% endif %}
-    {% if stackbit_banner.launch_url %}
+    {% if stackbit_banner.create_url %}
     <a
       class="theme-bar-button theme-bar-button-primary"
-      href="{{ stackbit_banner.launch_url }}"
+      href="{{ stackbit_banner.create_url }}"
     >
       <svg fill="currentColor" viewBox="0 0 131 107">
         <defs>

@@ -178,6 +178,10 @@ var _site = _interopRequireDefault(__webpack_require__(/*! ../models/site */ "./
 
 var _consts = _interopRequireDefault(__webpack_require__(/*! ./consts */ "./dist/loaders/consts.js"));
 
+var ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -194,7 +198,8 @@ function () {
 
     this.inputDir = _lodash.default.get(options, 'inputDir');
     this.assert(this.inputDir, "options.inputDir must be specified");
-    this.assert(_fs.default.existsSync(_path.default.resolve(this.inputDir)), "input directory '".concat(this.inputDir, "' does not exist"));
+    this.inputDir = _path.default.resolve(this.inputDir);
+    this.assert(_fs.default.existsSync(this.inputDir), "input directory '".concat(this.inputDir, "' does not exist"));
 
     var stackbitYamlPath = _utils.default.getFirstExistingFileSync(_consts.default.STACKBIT_YAML_NAMES, this.inputDir);
 
@@ -206,18 +211,28 @@ function () {
       delete this.stackbitYaml.templatesDir;
     }
 
-    options = _lodash.default.assign({}, _lodash.default.cloneDeep(this.ssgConsts()), _lodash.default.pick(this.stackbitYaml, ['ssgName', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'pageTemplateKey', 'layoutsDir', 'componentsDir']), options);
+    var ssgName = _lodash.default.get(this.stackbitYaml, 'ssgName', 'unibit');
+
+    this.ssgConsts = _lodash.default.cloneDeep(ssgConsts.ssgConstsForSSGType(ssgName));
+    options = _lodash.default.assign({}, this.ssgConsts, _lodash.default.pick(this.stackbitYaml, ['ssgName', 'version', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'staticDir', 'pageTemplateKey', 'pageMenusKey', 'layoutsDir', 'componentsDir']), options);
+
+    var layoutsDir = _lodash.default.get(options, 'layoutsDir', null);
+
+    var componentsDir = _lodash.default.get(options, 'componentsDir', null);
+
     this.ssgName = _lodash.default.get(options, 'ssgName');
-    this.configFilePath = _lodash.default.get(options, 'configFilePath');
+    this.version = _lodash.default.get(options, 'version');
+    this.configFilePaths = _lodash.default.get(options, 'configFilePaths');
     this.dataDir = _lodash.default.get(options, 'dataDir');
     this.pagesDir = _lodash.default.get(options, 'pagesDir');
     this.staticDir = _lodash.default.get(options, 'staticDir');
     this.pageTemplateKey = _lodash.default.get(options, 'pageTemplateKey');
-    this.layoutsDir = _path.default.resolve(this.inputDir, _lodash.default.get(options, 'layoutsDir'));
-    this.componentsDir = _path.default.resolve(this.inputDir, _lodash.default.get(options, 'componentsDir'));
+    this.pageMenusKey = _lodash.default.get(options, 'pageMenusKey');
+    this.layoutsDir = _lodash.default.isNull(layoutsDir) ? null : _path.default.resolve(this.inputDir, layoutsDir);
+    this.componentsDir = _lodash.default.isNull(componentsDir) ? null : _path.default.resolve(this.inputDir, componentsDir);
     this.publishDir = _lodash.default.get(options, 'publishDir');
     this.buildCommand = _lodash.default.get(options, 'buildCommand');
-    this.injectLocations = _lodash.default.get(options, 'injectLocations');
+    this.injectLocations = _lodash.default.get(options, 'injectLocations', null);
 
     _lodash.default.defaults(this.stackbitYaml, {
       ssgName: this.ssgName,
@@ -239,11 +254,6 @@ function () {
         this.fail(message);
       }
     }
-  }, {
-    key: "ssgConsts",
-    value: function ssgConsts() {
-      this.fail("ssgConsts method is not implemented");
-    }
     /**
      * @return {Site}
      */
@@ -251,14 +261,16 @@ function () {
   }, {
     key: "loadSite",
     value: function loadSite() {
-      console.log("[".concat(this.constructor.name, "] loading site from ").concat(_path.default.resolve(this.inputDir)));
+      console.log("[".concat(this.constructor.name, "] loading site from ").concat(this.inputDir));
       var data = {
         absPath: this.inputDir,
         ssgName: this.ssgName,
+        version: this.version,
         staticDir: this.staticDir,
         dataDir: this.dataDir,
         pagesDir: this.pagesDir,
         pageTemplateKey: this.pageTemplateKey,
+        pageMenusKey: this.pageMenusKey,
         config: this.loadConfig(),
         stackbitYamlFileName: this.stackbitYamlFileName,
         stackbitYaml: this.stackbitYaml,
@@ -273,17 +285,17 @@ function () {
   }, {
     key: "loadConfig",
     value: function loadConfig() {
-      var absPath = _path.default.resolve(this.inputDir, this.configFilePath);
-
-      console.log("[".concat(this.constructor.name, "] loading config from: ").concat(absPath));
-
-      if (!_fs.default.existsSync(absPath)) {
-        this.fail("".concat(absPath, " does not exist"));
+      if (!this.configFilePaths) {
+        return null;
       }
 
+      var absPath = _utils.default.getFirstExistingFileSync(this.configFilePaths, this.inputDir);
+
+      this.assert(absPath, "".concat(absPath, " does not exist"));
+      console.log("[".concat(this.constructor.name, "] loading config from: ").concat(absPath));
       return {
         absPath: absPath,
-        relPath: this.configFilePath,
+        relPath: _path.default.relative(this.inputDir, absPath),
         data: _utils.default.parseFileSync(absPath)
       };
     }
@@ -332,12 +344,20 @@ function () {
   }, {
     key: "loadLayouts",
     value: function loadLayouts() {
+      if (!this.layoutsDir) {
+        return [];
+      }
+
       console.log("[".concat(this.constructor.name, "] loading layouts from: ").concat(this.layoutsDir));
       return this.loadFiles(this.layoutsDir);
     }
   }, {
     key: "loadComponents",
     value: function loadComponents() {
+      if (!this.componentsDir) {
+        return [];
+      }
+
       console.log("[".concat(this.constructor.name, "] loading components from: ").concat(this.componentsDir));
       return this.loadFiles(this.componentsDir);
     }
@@ -514,9 +534,7 @@ function () {
   }, {
     key: "getPageMenuItems",
     value: function getPageMenuItems(page) {
-      var ssgConsts = this.ssgConsts();
-
-      var menus = _lodash.default.get(page, ssgConsts.pageMenusKey, null);
+      var menus = _lodash.default.get(page, this.ssgConsts.pageMenusKey, null);
 
       if (!menus || !_lodash.default.isPlainObject(menus)) {
         return [];
@@ -566,140 +584,6 @@ exports.default = _default;
 
 /***/ }),
 
-/***/ "./dist/loaders/gatsby-loader.js":
-/*!***************************************!*\
-  !*** ./dist/loaders/gatsby-loader.js ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
-
-var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
-
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
-
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
-
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-
-var GatsbyLoader =
-/*#__PURE__*/
-function (_BaseLoader) {
-  _inherits(GatsbyLoader, _BaseLoader);
-
-  function GatsbyLoader() {
-    _classCallCheck(this, GatsbyLoader);
-
-    return _possibleConstructorReturn(this, _getPrototypeOf(GatsbyLoader).apply(this, arguments));
-  }
-
-  _createClass(GatsbyLoader, [{
-    key: "ssgConsts",
-    value: function ssgConsts() {
-      return _ssgConsts.GATSBY;
-    }
-  }]);
-
-  return GatsbyLoader;
-}(_baseLoader.default);
-
-exports.default = GatsbyLoader;
-//# sourceMappingURL=gatsby-loader.js.map
-
-/***/ }),
-
-/***/ "./dist/loaders/hugo-loader.js":
-/*!*************************************!*\
-  !*** ./dist/loaders/hugo-loader.js ***!
-  \*************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
-
-var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
-
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
-
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
-
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-
-var HugoLoader =
-/*#__PURE__*/
-function (_BaseLoader) {
-  _inherits(HugoLoader, _BaseLoader);
-
-  function HugoLoader() {
-    _classCallCheck(this, HugoLoader);
-
-    return _possibleConstructorReturn(this, _getPrototypeOf(HugoLoader).apply(this, arguments));
-  }
-
-  _createClass(HugoLoader, [{
-    key: "ssgConsts",
-    value: function ssgConsts() {
-      return _ssgConsts.HUGO;
-    }
-  }]);
-
-  return HugoLoader;
-}(_baseLoader.default);
-
-exports.default = HugoLoader;
-//# sourceMappingURL=hugo-loader.js.map
-
-/***/ }),
-
 /***/ "./dist/loaders/index.js":
 /*!*******************************!*\
   !*** ./dist/loaders/index.js ***!
@@ -720,28 +604,12 @@ Object.defineProperty(exports, "UnibitLoader", {
     return _unibitLoader.default;
   }
 });
-Object.defineProperty(exports, "JekyllLoader", {
-  enumerable: true,
-  get: function get() {
-    return _jekyllLoader.default;
-  }
-});
-Object.defineProperty(exports, "HugoLoader", {
-  enumerable: true,
-  get: function get() {
-    return _hugoLoader.default;
-  }
-});
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
+var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
+
 var _unibitLoader = _interopRequireDefault(__webpack_require__(/*! ./unibit-loader */ "./dist/loaders/unibit-loader.js"));
-
-var _jekyllLoader = _interopRequireDefault(__webpack_require__(/*! ./jekyll-loader */ "./dist/loaders/jekyll-loader.js"));
-
-var _hugoLoader = _interopRequireDefault(__webpack_require__(/*! ./hugo-loader */ "./dist/loaders/hugo-loader.js"));
-
-var _gatsbyLoader = _interopRequireDefault(__webpack_require__(/*! ./gatsby-loader */ "./dist/loaders/gatsby-loader.js"));
 
 var _consts = _interopRequireDefault(__webpack_require__(/*! ./consts */ "./dist/loaders/consts.js"));
 
@@ -750,10 +618,7 @@ var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var loaderMap = {
-  unibit: _unibitLoader.default,
-  jekyll: _jekyllLoader.default,
-  hugo: _hugoLoader.default,
-  gatsby: _gatsbyLoader.default
+  unibit: _unibitLoader.default
 };
 /**
  * @param options
@@ -785,80 +650,14 @@ function loadSite(options) {
 }
 
 function loaderForSSGName(ssgName) {
-  if (!_lodash.default.has(loaderMap, ssgName)) {
-    throw new Error("loader for ".concat(ssgName, " is not implemented"));
+  if (_lodash.default.has(loaderMap, ssgName)) {
+    return _lodash.default.get(loaderMap, ssgName);
+  } else {
+    // throw new Error(`loader for ${ssgName} is not implemented`);
+    return _baseLoader.default;
   }
-
-  return _lodash.default.get(loaderMap, ssgName);
 }
 //# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ "./dist/loaders/jekyll-loader.js":
-/*!***************************************!*\
-  !*** ./dist/loaders/jekyll-loader.js ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
-
-var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
-
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
-
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
-
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-
-var JekyllLoader =
-/*#__PURE__*/
-function (_BaseLoader) {
-  _inherits(JekyllLoader, _BaseLoader);
-
-  function JekyllLoader() {
-    _classCallCheck(this, JekyllLoader);
-
-    return _possibleConstructorReturn(this, _getPrototypeOf(JekyllLoader).apply(this, arguments));
-  }
-
-  _createClass(JekyllLoader, [{
-    key: "ssgConsts",
-    value: function ssgConsts() {
-      return _ssgConsts.JEKYLL;
-    }
-  }]);
-
-  return JekyllLoader;
-}(_baseLoader.default);
-
-exports.default = JekyllLoader;
-//# sourceMappingURL=jekyll-loader.js.map
 
 /***/ }),
 
@@ -883,7 +682,7 @@ var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
-var _ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
+var ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
 
 var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
 
@@ -939,16 +738,11 @@ function (_BaseLoader) {
   }
 
   _createClass(UnibitLoader, [{
-    key: "ssgConsts",
-    value: function ssgConsts() {
-      return _ssgConsts.UNIBIT;
-    }
-  }, {
     key: "loadLayouts",
     value: function loadLayouts() {
       var layouts = _get(_getPrototypeOf(UnibitLoader.prototype), "loadLayouts", this).call(this);
 
-      var baseLayoutFilePath = _path.default.resolve(this.layoutsDir, _ssgConsts.BASE_LAYOUT_FILE_NAME);
+      var baseLayoutFilePath = _path.default.resolve(this.layoutsDir, ssgConsts.BASE_LAYOUT_FILE_NAME);
 
       var pathObject = _path.default.parse(baseLayoutFilePath);
 
@@ -1042,16 +836,18 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var siteProps = ['absPath', 'ssgName', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menuItems'];
+var siteProps = ['absPath', 'ssgName', 'version', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'pageMenusKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menuItems'];
 /**
  * @class Site
  *
- * @property {string} absPath
- * @property {string} ssgName
+ * @property {string} absPath Absolute path of the root folder of this theme
+ * @property {string} ssgName The name of the Static Site Generator of this theme
+ * @property {string} version The version of the Static Site Generator
  * @property {string} staticDir
  * @property {string} dataDir
  * @property {string} pagesDir
  * @property {string} pageTemplateKey
+ * @property {string} pageMenusKey
  * @property {object} config
  * @property {string} stackbitYamlFileName
  * @property {object} stackbitYaml
@@ -1267,7 +1063,7 @@ var buildOptions = function buildOptions(yargs) {
     'ugly-urls': {
       describe: 'Generate ugly urls',
       boolean: true,
-      defaultDescription: 'When this flag is missing, Unibit generates pretty URLs by default, unless uglyUrls defined in config.yml'
+      defaultDescription: 'When this flag is missing, Unibit generates pretty URLs by default, unless uglyUrls defined in config.yaml'
     }
   }).alias('h', 'help');
 };
@@ -1355,8 +1151,9 @@ var BUILD_SCRIPT = './ssg-build.sh';
 exports.BUILD_SCRIPT = BUILD_SCRIPT;
 var JEKYLL = {
   ssgName: SSG_TYPES.JEKYLL,
+  version: '3.8.4',
   supportingFilesDirName: 'jekyll',
-  configFilePath: '_config.yml',
+  configFilePaths: ['_config.yml', '_config.yaml', '_config.toml'],
   menusDataFilePath: 'menus.yml',
   dataDir: '_data',
   pagesDir: '',
@@ -1385,7 +1182,7 @@ var HUGO = {
   ssgName: SSG_TYPES.HUGO,
   version: '0.47',
   supportingFilesDirName: 'hugo',
-  configFilePath: 'config.yaml',
+  configFilePaths: ['config.yaml', 'config.yml', 'config.toml', 'config.json'],
   menusDataFilePath: null,
   dataDir: 'data',
   pagesDir: 'content',
@@ -1419,8 +1216,9 @@ var GATSBY_SCRIPT_INJECT_TOKEN = '{/* put additional scripts here */}';
 var GATSBY_SCRIPT_INJECT_TOKEN_REG_EXP = '\\{\\/\\* put additional scripts here \\*\\/\\}';
 var GATSBY = {
   ssgName: SSG_TYPES.GATSBY,
+  version: '2.3.0',
   supportingFilesDirName: 'gatsby',
-  configFilePath: 'site-metadata.json',
+  configFilePaths: ['site-metadata.json'],
   menusDataFilePath: 'menus.json',
   dataDir: 'src/data',
   pagesDir: 'src/pages',
@@ -1450,8 +1248,9 @@ var GATSBY = {
 exports.GATSBY = GATSBY;
 var UNIBIT = {
   ssgName: 'unibit',
+  version: '0.1.9',
   supportingFilesDirName: null,
-  configFilePath: 'config.yml',
+  configFilePaths: ['config.yaml', 'config.yml'],
   menusDataFilePath: null,
   dataDir: 'data',
   pagesDir: 'content',
@@ -1485,7 +1284,8 @@ function ssgConstsForSSGType(ssgType) {
   if (_lodash.default.has(configMap, ssgType)) {
     return _lodash.default.get(configMap, ssgType);
   } else {
-    throw new Error("Config for ".concat(ssgType, " is not implemented"));
+    // throw new Error(`Config for ${ssgType} is not implemented`);
+    return {};
   }
 }
 
@@ -1499,7 +1299,8 @@ function configModelTransformerForSSGType(ssgType) {
   if (_lodash.default.has(configTransformerMap, ssgType)) {
     return _lodash.default.get(configTransformerMap, ssgType);
   } else {
-    throw new Error("Config transformer for ".concat(ssgType, " is not implemented"));
+    // throw new Error(`Config transformer for ${ssgType} is not implemented`);
+    return null;
   }
 }
 //# sourceMappingURL=consts.js.map
@@ -1960,10 +1761,13 @@ var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
 
 var _url = _interopRequireDefault(__webpack_require__(/*! url */ "url"));
 
+var _utils = __webpack_require__(/*! ../utils */ "./dist/utils/index.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var startingPort = 5000;
 var portTryPool = 10;
+var logger = (0, _utils.createLogger)('LiveReload');
 var mimeType = {
   '.ico': 'image/x-icon',
   '.html': 'text/html',
@@ -2085,7 +1889,7 @@ var getServer = function getServer(ports, filesDir) {
 
 
 var reload = function reload(connections) {
-  console.log('Watcher: Reload page');
+  logger.log('Reload page');
   connections.filter(function (connection) {
     return connection.readyState === 1;
   }).forEach(function (connection) {
@@ -2101,7 +1905,7 @@ var reload = function reload(connections) {
 
 
 var fileDidChange = function fileDidChange(event, filePath, emitter) {
-  console.log("Watcher: ".concat(_lodash.default.capitalize(event), " ").concat(filePath));
+  logger.log("".concat(_lodash.default.capitalize(event), " ").concat(filePath));
   emitter.emit('change', filePath, event);
 };
 /**
@@ -2134,12 +1938,11 @@ var watcher = function watcher(options) {
       throw new Error("All ports from ".concat(port, " to ").concat(port + portTryPool, " are occupied"));
     }
 
-    console.log("Started server at http://localhost:".concat(server.port));
+    logger.log("Started server at http://localhost:".concat(server.port));
     var eventEmitter = new _events.default();
 
-    var watcher = _chokidar.default.watch(_path.default.resolve(inputDir), {
-      ignoreInitial: true,
-      ignored: outputDir
+    var watcher = _chokidar.default.watch([], {
+      ignoreInitial: true
     });
 
     watcher.on('change', function (filePath) {
@@ -2149,10 +1952,11 @@ var watcher = function watcher(options) {
     }).on('unlink', function (filePath) {
       return fileDidChange('remove', filePath, eventEmitter);
     });
-    console.log("Start watching files at ".concat(inputDir));
+    logger.log("Start watching files at ".concat(inputDir));
     return {
       events: eventEmitter,
       reload: reload.bind(null, server.connections),
+      configure: watcher.add.bind(watcher),
       port: server.port
     };
   });
@@ -2218,10 +2022,10 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
       <span>Fork</span>
     </a>
     {% endif %}
-    {% if stackbit_banner.launch_url %}
+    {% if stackbit_banner.create_url %}
     <a
       class="theme-bar-button theme-bar-button-primary"
-      href="{{ stackbit_banner.launch_url }}"
+      href="{{ stackbit_banner.create_url }}"
     >
       <svg fill="currentColor" viewBox="0 0 131 107">
         <defs>
@@ -2341,8 +2145,6 @@ exports.default = void 0;
 
 var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
 
-var _fs = _interopRequireDefault(__webpack_require__(/*! fs */ "fs"));
-
 var _fsExtra = _interopRequireDefault(__webpack_require__(/*! fs-extra */ "fs-extra"));
 
 var _nunjucks = _interopRequireDefault(__webpack_require__(/*! nunjucks */ "nunjucks"));
@@ -2383,8 +2185,11 @@ var Unibit =
 /*#__PURE__*/
 function () {
   function Unibit(options) {
+    var _this = this;
+
     _classCallCheck(this, Unibit);
 
+    this.logger = _utils.default.createLogger(this.constructor.name);
     this.prettierOptions = _lodash.default.get(options, 'prettier');
     this.inputDir = _lodash.default.get(options, 'inputDir');
     this.outputDir = _lodash.default.get(options, 'outputDir', 'output');
@@ -2392,10 +2197,10 @@ function () {
     this.inputConfig = _lodash.default.get(options, 'config', {});
     this.withBanner = _lodash.default.get(options, 'withBanner');
     this.watch = _lodash.default.get(options, 'watch', false);
-    console.log("Unibit: generating site into ".concat(_path.default.resolve(this.outputDir)));
+    this.logger.log("Generating site into ".concat(_path.default.resolve(this.outputDir)));
 
     _lodash.default.forEach(options, function (value, key) {
-      console.log("  ".concat(key, ": ").concat(value));
+      _this.logger.log("  ".concat(key, ": ").concat(value));
     });
 
     this.watcher = null;
@@ -2442,7 +2247,7 @@ function () {
   }, {
     key: "generate",
     value: function generate() {
-      var _this = this;
+      var _this2 = this;
 
       if (this.isGenerating) {
         this.enqueue = true;
@@ -2451,42 +2256,44 @@ function () {
 
       this.isGenerating = true;
       return Promise.resolve().then(function () {
-        return _this.watch && !_this.watcher && _this.registerWatcher();
+        return _this2.watch && !_this2.watcher && _this2.registerWatcher();
       }).then(function () {
-        var outputDir = _path.default.resolve(_this.outputDir);
+        var outputDir = _path.default.resolve(_this2.outputDir);
 
         _fsExtra.default.emptyDirSync(outputDir);
 
-        _this.pageRenderQueue = [];
-        _this.renderingPage = null;
+        _this2.pageRenderQueue = [];
+        _this2.renderingPage = null;
 
-        _this.loadSite();
+        _this2.loadSite();
 
-        _this.copyStaticFiles();
+        _this2.copyStaticFiles();
 
-        _this.copySupportingFiles();
+        _this2.copySupportingFiles();
 
-        _this.compileSass();
+        _this2.compileSass();
 
-        return _this.generatePages();
+        return _this2.generatePages();
       }).then(function () {
-        _this.isGenerating = false;
+        _this2.isGenerating = false;
 
-        if (_this.enqueue) {
-          _this.enqueue = false;
-          return _this.generate();
-        } else if (_this.watcher) {
-          _this.watcher.reload();
+        if (_this2.enqueue) {
+          _this2.enqueue = false;
+          return _this2.generate();
+        } else if (_this2.watcher) {
+          _this2.reloadWatcher();
         }
       }).catch(function (err) {
-        _this.isGenerating = false;
-        _this.enqueue = false;
+        _this2.isGenerating = false;
+        _this2.enqueue = false;
+
+        _this2.logger.error(err.message);
       });
     }
   }, {
     key: "registerWatcher",
     value: function registerWatcher() {
-      var _this2 = this;
+      var _this3 = this;
 
       var inputDir = this.inputDir,
           outputDir = this.outputDir;
@@ -2494,10 +2301,27 @@ function () {
         inputDir: inputDir,
         outputDir: outputDir
       }).then(function (watcher) {
-        _this2.watcher = watcher;
+        _this3.watcher = watcher;
 
-        _this2.watcher.events.on('change', _lodash.default.debounce(_this2.generate.bind(_this2), 200));
+        _this3.watcher.events.on('change', _lodash.default.debounce(_this3.generate.bind(_this3), 200));
       });
+    }
+  }, {
+    key: "reloadWatcher",
+    value: function reloadWatcher() {
+      var _this4 = this;
+
+      if (!this.watcher) {
+        return;
+      }
+
+      var dirs = [this.site.pagesDir, this.site.dataDir, this.site.staticDir, this.site.stackbitYamlFileName, this.site.config.absPath, this.loader.componentsDir, this.loader.layoutsDir, 'sass'].filter(function (d) {
+        return d;
+      }).map(function (dir) {
+        return _path.default.resolve(_this4.site.absPath, dir);
+      });
+      this.watcher.configure(dirs);
+      this.watcher.reload();
     }
   }, {
     key: "processPageTree",
@@ -2518,12 +2342,14 @@ function () {
 
       var pathComponents = _path.default.parse(item.url);
 
-      if (url.match(/^index\.\w+$/)) {
-        item.url = '';
-      } else if (pathComponents.name !== 'index') {
-        item.url = [pathComponents.dir, pathComponents.name].filter(function (p) {
-          return p;
-        }).join(_path.default.sep) + _path.default.sep;
+      if (!url.startsWith('http') && !url.startsWith('//')) {
+        if (pathComponents.base.includes('index.htm')) {
+          item.url = item.url.replace(pathComponents.base, '');
+        } else if (pathComponents.ext.includes('htm')) {
+          item.url = [pathComponents.dir, pathComponents.name].filter(function (p) {
+            return p;
+          }).join(_path.default.sep) + _path.default.sep;
+        }
       }
 
       return item;
@@ -2532,11 +2358,11 @@ function () {
     key: "copySupportingFiles",
     value: function copySupportingFiles() {
       if (this.showBanner) {
-        _fs.default.copyFileSync(_path.default.join(__dirname, './supporting-files/stackbit-banner.css'), _path.default.join(this.outputDir, '/assets/css/stackbit-banner.css'));
+        _fsExtra.default.copySync(_path.default.join(__dirname, './supporting-files/stackbit-banner.css'), _path.default.join(this.outputDir, '/assets/css/stackbit-banner.css'));
       }
 
       if (this.watch) {
-        _fs.default.copyFileSync(_path.default.join(__dirname, './supporting-files/live-reload.js'), _path.default.join(this.outputDir, '/assets/js/live-reload.js'));
+        _fsExtra.default.copySync(_path.default.join(__dirname, './supporting-files/live-reload.js'), _path.default.join(this.outputDir, '/assets/js/live-reload.js'));
       }
     }
   }, {
@@ -2570,8 +2396,8 @@ function () {
         var ext = _path.default.extname(inputFile);
 
         if (ext === '.njk') {
-          console.log('Unibit: converting scss file with Nunjucks: ' + inputFile);
-          inputData = _fs.default.readFileSync(inputFile, 'utf8');
+          this.logger.log('Converting sass file with Nunjucks: ' + inputFile);
+          inputData = _fsExtra.default.readFileSync(inputFile, 'utf8');
           inputData = this.env.renderString(inputData, {
             site: {
               params: config.params
@@ -2580,39 +2406,45 @@ function () {
           inputFile = null;
         }
 
-        var res = _nodeSass.default.renderSync({
-          file: inputFile,
-          data: inputData,
-          includePaths: includePaths,
-          indentWidth: _lodash.default.get(sassOptions, 'indentWidth', 4),
-          outputStyle: _lodash.default.get(sassOptions, 'outputStyle', 'nested'),
-          precision: _lodash.default.get(sassOptions, 'precision', 10)
-        });
+        this.logger.log('Compiling sass');
 
-        _fsExtra.default.outputFileSync(outputFile, res.css);
+        try {
+          var res = _nodeSass.default.renderSync({
+            file: inputFile,
+            data: inputData,
+            includePaths: includePaths,
+            indentWidth: _lodash.default.get(sassOptions, 'indentWidth', 4),
+            outputStyle: _lodash.default.get(sassOptions, 'outputStyle', 'nested'),
+            precision: _lodash.default.get(sassOptions, 'precision', 10)
+          });
+
+          _fsExtra.default.outputFileSync(outputFile, res.css);
+        } catch (err) {
+          throw new Error(err.formatted || err.message);
+        }
       }
     }
   }, {
     key: "generatePages",
     value: function generatePages() {
-      var _this3 = this;
+      var _this5 = this;
 
       this.pages.forEach(function (page) {
-        page.content = _this3.markdownify(page.markdown);
+        page.content = _this5.markdownify(page.markdown);
       });
       var pages = this.pages.filter(function (page) {
-        return _lodash.default.get(_this3.site.config.data.output, page.relDir, true);
+        return _lodash.default.get(_this5.site.config.data.output, page.relDir, true);
       });
       var pageTree = this.mapFolders(this.site.pageTree);
-      console.log('Unibit: generating ' + pages.length + ' pages...');
+      this.logger.log('Generating ' + pages.length + ' pages...');
       return _utils.default.forEachPromise(pages, function (page) {
-        var context = _this3.createPageContext(page, pageTree);
+        var context = _this5.createPageContext(page, pageTree);
 
-        return _this3.renderAndSavePage(context, page.url).then(function () {
-          var pageRenderQueue = _lodash.default.remove(_this3.pageRenderQueue);
+        return _this5.renderAndSavePage(context, page.url).then(function () {
+          var pageRenderQueue = _lodash.default.remove(_this5.pageRenderQueue);
 
           return _utils.default.forEachPromise(pageRenderQueue, function (renderItem) {
-            return _this3.renderAndSavePage(renderItem.context, renderItem.outputUrl);
+            return _this5.renderAndSavePage(renderItem.context, renderItem.outputUrl);
           });
         });
       });
@@ -2624,14 +2456,14 @@ function () {
   }, {
     key: "mapFolders",
     value: function mapFolders(pageTree) {
-      var _this4 = this;
+      var _this6 = this;
 
       var folders = [];
 
       _lodash.default.forEach(pageTree.folders, function (folder) {
         var folderName = _path.default.relative(pageTree.path, folder.path);
 
-        var mapped = _this4.mapFolders(folder);
+        var mapped = _this6.mapFolders(folder);
 
         folders.push(mapped);
         folders[folderName] = mapped;
@@ -2646,7 +2478,7 @@ function () {
   }, {
     key: "createPageContext",
     value: function createPageContext(page, pageTree) {
-      // console.log('Unibit: generating page for ' + page.relPath);
+      // this.logger.log('Generating page for ' + page.relPath);
       var config = this.site.config.data;
       var stackbitYaml = this.site.stackbitYaml;
       var env = this.env;
@@ -2681,7 +2513,7 @@ function () {
       context.getPages = this.getPages.bind(this, context);
       context.paginate = this.paginate.bind(this, context);
       context.link = this.link.bind(this);
-      context.classNames = this.classNames.bind(this); // console.log("context:\n" + JSON.stringify(context, null, 4));
+      context.classNames = this.classNames.bind(this); // this.logger.log("context:\n" + JSON.stringify(context, null, 4));
 
       return context;
     }
@@ -2694,7 +2526,7 @@ function () {
         show_banner: this.showBanner,
         component: 'stackbit-banner.html',
         name: this.site.config.data.title,
-        launch_url: "http://app.stackbit.com/wizard",
+        create_url: "http://app.stackbit.com/create",
         github_url: ""
       }, stackbitBanner);
     }
@@ -2709,33 +2541,34 @@ function () {
   }, {
     key: "renderAndSavePage",
     value: function renderAndSavePage(context, url) {
-      var _this5 = this;
+      var _this7 = this;
 
-      this.assert(this.renderingPage === null, "Unibit: tying to generate two pages in parallel");
+      this.assert(this.renderingPage === null, "Trying to generate two pages in parallel");
       var outputUrl = url.match(/\w+\.\w+$/) ? url : _path.default.join(url, 'index.html');
       this.renderingPage = {
         context: context,
         outputUrl: outputUrl
       };
       return this.renderPage(context).then(function (res) {
-        _this5.renderingPage = null;
+        _this7.renderingPage = null;
 
-        _this5.savePage(res, outputUrl);
+        _this7.savePage(res, outputUrl);
       });
     }
   }, {
     key: "renderPage",
     value: function renderPage(context) {
-      var _this6 = this;
+      var _this8 = this;
 
       var templateFile = _lodash.default.get(context.page, 'template', 'body') + '.html';
       return new Promise(function (resolve, reject) {
-        _this6.env.render(templateFile, context, function (err, res) {
+        _this8.env.render(templateFile, context, function (err, res) {
           if (err) {
-            console.error("err:", err);
+            _this8.logger.error("err:", err);
+
             reject(err);
           } else {
-            //console.log("result:\n" + res);
+            //this.logger.log("result:\n" + res);
             resolve(res);
           }
         });
@@ -2827,7 +2660,7 @@ function () {
   }, {
     key: "paginate",
     value: function paginate(context, items, itemsPerPage) {
-      var _this7 = this;
+      var _this9 = this;
 
       context = _lodash.default.merge({}, context);
       var pagesCount = Math.max(1, Math.ceil(items.length / itemsPerPage));
@@ -2882,7 +2715,7 @@ function () {
           }
         });
 
-        _this7.addPageToRenderQueue(pageContext, outputUrl);
+        _this9.addPageToRenderQueue(pageContext, outputUrl);
       });
 
       return pages[0];
@@ -3061,6 +2894,7 @@ module.exports = {
   printHRTime: printHRTime,
   forEachDeep: forEachDeep,
   mapDeep: mapDeep,
+  getFirst: getFirst,
   getFirstExistingFileSync: getFirstExistingFileSync,
   parseFirstExistingFileSync: parseFirstExistingFileSync,
   parseFileSync: parseFileSync,
@@ -3072,7 +2906,8 @@ module.exports = {
   failFunctionWithTag: failFunctionWithTag,
   assertFunctionWithFail: assertFunctionWithFail,
   getPageModelNameByPageFilePath: getPageModelNameByPageFilePath,
-  flattenPageTree: flattenPageTree
+  flattenPageTree: flattenPageTree,
+  createLogger: createLogger
 };
 
 var INDENT = _lodash.default.repeat(' ', 4);
@@ -3407,6 +3242,21 @@ function forEachDeep(value, iteratee, key, object) {
   }
 }
 /**
+ * Gets the value at the first path of object having non undefined value.
+ * If all paths resolve to undefined values, the defaultValue is returned.
+ *
+ * @param {Object} object The object to query.
+ * @param {Array<String | Array<String>>} paths The property paths to search for.
+ * @param {*} [defaultValue] The value returned if all paths resolve to undefined values
+ * @returns {*}
+ */
+
+
+function getFirst(object, paths, defaultValue) {
+  var result = (0, _lodash.default)(object).at(paths).reject(_lodash.default.isUndefined).first();
+  return _lodash.default.isUndefined(result) ? defaultValue : result;
+}
+/**
  *
  * @param {*} value
  * @param {Function} iteratee Function (value: any, fieldPath: Array, stack: Array)
@@ -3447,19 +3297,15 @@ function mapDeep(value, iteratee, options, _keyPath, _objectStack) {
 }
 
 function getFirstExistingFileSync(fileNames, inputDir) {
-  return _lodash.default.chain(fileNames).map(function (filePath) {
-    return _path.default.resolve(inputDir, filePath);
+  return _lodash.default.chain(fileNames).map(function (fileName) {
+    return _path.default.resolve(inputDir, fileName);
   }).find(function (filePath) {
     return _fs.default.existsSync(filePath);
   }).value();
 }
 
 function parseFirstExistingFileSync(fileNames, inputDir) {
-  var filePath = _lodash.default.chain(fileNames).map(function (filePath) {
-    return _path.default.resolve(inputDir, filePath);
-  }).find(function (filePath) {
-    return _fs.default.existsSync(filePath);
-  }).value();
+  var filePath = getFirstExistingFileSync(fileNames, inputDir);
 
   if (filePath) {
     return parseFileSync(filePath);
@@ -3556,8 +3402,9 @@ function deepFreeze(obj) {
 
 function joinPathAndGlob(pathStr, glob) {
   var globParts = _lodash.default.chain(glob).trim('{}').split(',').compact().map(function (globPart) {
-    return _path.default.join(pathStr, globPart);
-  }).value();
+    return _lodash.default.compact([pathStr, globPart]).join('/');
+  }) // should use forward slash even on windows for micromatch
+  .value();
 
   return globParts.length > 1 ? "{".concat(globParts.join(','), "}") : _lodash.default.head(globParts);
 }
@@ -3627,6 +3474,25 @@ function flattenPageTree(pageTree) {
 
   return pages.concat(_lodash.default.get(pageTree, 'pages', []));
 }
+
+function createLogger(scope, transport) {
+  var levels = ['log', 'info', 'debug', 'error'];
+  var logger = transport || console;
+
+  var noop = function noop() {};
+
+  var obj = {};
+  levels.forEach(function (level) {
+    obj[level] = function () {
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      (logger[level] || noop).apply(void 0, ["[".concat(scope, "]")].concat(args));
+    };
+  });
+  return obj;
+}
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -3668,7 +3534,7 @@ function mergeContentModelExtensions(models) {
 function extendModel(model, models, extendedModelsByName) {
   var _extendPath = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
 
-  assert(!_lodash.default.includes(_extendPath, model.name), "cyclic dependency detected in model extend tree: ".concat(_extendPath.join(' -> ') + model.name));
+  assert(!_lodash.default.includes(_extendPath, model.name), "cyclic dependency detected in model extend tree: ".concat(_extendPath.join(' -> '), " -> ").concat(model.name));
 
   if (_lodash.default.has(extendedModelsByName, model.name)) {
     return extendedModelsByName[model.name];
@@ -3823,9 +3689,15 @@ var _joi = _interopRequireDefault(__webpack_require__(/*! @hapi/joi */ "@hapi/jo
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+var modelNamePattern = /^[a-z]([a-z0-9_]*[a-z0-9])?$/;
+var modelNameError = 'Invalid model name: must contain only lower case alphanumeric characters and underscores (but not at the edges of the name) and start with a letter. See documentation for more details.';
+var fieldNamePattern = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+var fieldNameError = 'Invalid field name: must contain only alphanumeric characters, hyphens and underscores (but not at the edges of the name) and start with a letter. See documentation for more details.';
+
 var StackbitYaml = _joi.default.object({
-  stackbitVersion: _joi.default.string(),
-  ssgName: _joi.default.string().valid('unibit', 'gatsby', 'hugo', 'jekyll'),
+  stackbitVersion: _joi.default.string().required(),
+  ssgName: _joi.default.string(),
+  version: _joi.default.string(),
   uploadDir: _joi.default.string(),
   buildCommand: _joi.default.string(),
   publishDir: _joi.default.string(),
@@ -3833,7 +3705,8 @@ var StackbitYaml = _joi.default.object({
   injectLocations: _joi.default.any(),
   models: _joi.default.any(),
   dataDir: _joi.default.string(),
-  pagesDir: _joi.default.string(),
+  pagesDir: _joi.default.string().allow(''),
+  staticDir: _joi.default.string(),
   pageTemplateKey: _joi.default.string(),
   templatesDir: _joi.default.string(),
   // left for backward compatibility with new layoutsDir
@@ -3845,8 +3718,12 @@ var StackbitYaml = _joi.default.object({
 });
 
 var PageModel = _joi.default.object({
+  name: _joi.default.string().regex(modelNamePattern).error(function () {
+    return modelNameError;
+  }).required(),
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
+  description: _joi.default.string(),
   template: _joi.default.string().required(),
   singleInstance: _joi.default.boolean(),
   file: _joi.default.string().when('singleInstance', {
@@ -3872,8 +3749,10 @@ var PageModel = _joi.default.object({
 });
 
 var ObjectModel = _joi.default.object({
+  name: _joi.default.string().regex(modelNamePattern).required(),
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
+  description: _joi.default.string(),
   labelField: _joi.default.string(),
   extends: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$modelNames'))),
   fields: _joi.default.array().items(_joi.default.lazy(function () {
@@ -3882,8 +3761,12 @@ var ObjectModel = _joi.default.object({
 });
 
 var DataModel = _joi.default.object({
+  name: _joi.default.string().regex(modelNamePattern).error(function () {
+    return modelNameError;
+  }).required(),
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
+  description: _joi.default.string(),
   file: _joi.default.string().required(),
   fields: _joi.default.array().items(_joi.default.lazy(function () {
     return ModelField;
@@ -3891,8 +3774,10 @@ var DataModel = _joi.default.object({
 });
 
 var ConfigModel = _joi.default.object({
+  name: _joi.default.string().allow('config'),
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
+  description: _joi.default.string(),
   fields: _joi.default.array().items(_joi.default.lazy(function () {
     return ModelField;
   }))
@@ -3900,7 +3785,9 @@ var ConfigModel = _joi.default.object({
 
 var ModelField = _joi.default.object({
   type: _joi.default.string().required(),
-  name: _joi.default.string().required(),
+  name: _joi.default.string().regex(fieldNamePattern).error(function () {
+    return fieldNameError;
+  }).required(),
   label: _joi.default.string().required(),
   description: _joi.default.string().allow(''),
   required: _joi.default.boolean(),
@@ -4224,9 +4111,13 @@ function () {
 
         this.validateStackbitYaml();
         this.renderer.stage('Validating Data');
-        this.step(this.site.config.relPath, function () {
-          _this.validateConfig(configModels, _this.site.config);
-        });
+
+        if (!_lodash.default.isEmpty(configModels)) {
+          this.step(this.site.config.relPath, function () {
+            _this.validateConfig(configModels, _this.site.config);
+          });
+        }
+
         (this.site.dataFiles || []).forEach(function (dataFile) {
           _this.step(dataFile.relPath, function () {
             _this.validateDataFile(dataModels, dataFile);
@@ -4326,7 +4217,7 @@ function () {
       });
       this.models.forEach(function (model) {
         _this2.step(model.name, function () {
-          _this2.validateModelSchema(model.name, _lodash.default.omit(model, ['name']));
+          _this2.validateModelSchema(model.name, model);
 
           _this2.validateModelFields(model);
         });

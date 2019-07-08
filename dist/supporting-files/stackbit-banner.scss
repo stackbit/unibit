@@ -35,6 +35,9 @@ body.has-theme-bar {
   font-size: 14px;
   line-height: 18px;
   font-weight: normal;
+  * {
+    box-sizing: border-box;
+  }
   &.theme-bar-hidden {
     display: none;
   }
@@ -65,18 +68,21 @@ body.has-theme-bar {
     }
   }
   .theme-bar-left {
-
+    flex: 2;
   }
   .theme-bar-center {
     display: flex;
   }
   .theme-bar-right {
     display: flex;
+    flex: 2;
+    justify-content: flex-end;
   }
   .theme-bar-name {
     font-size: 16px;
     color: $theme-bar-text-color;
     font-weight: 500;
+    margin-right: 5px;
   }
   // Buttons
   .theme-bar-button {
@@ -84,16 +90,17 @@ body.has-theme-bar {
     align-items: center;
     padding: 6px 20px;
     border-radius: 32px;
-    color: rgba($theme-bar-button-text-color, 0.8);
+    color: rgba($theme-bar-button-text-color, 0.8) !important;
     background-color: $theme-bar-button-bg-color;
-    margin-left: 10px;
+    margin-left: 5px;
+    margin-right: 5px;
     transition: border 0.3s ease, color 0.3s ease, background 0.3s ease;
     box-shadow: none;
     justify-content: center;
     text-align: center;
     &:hover {
       background-color: darken($theme-bar-button-bg-color, 5%);
-      color: $theme-bar-button-text-color;
+      color: $theme-bar-button-text-color !important;
     }
     &.theme-bar-button-primary {
       color: $theme-bar-button-primary-text-color;
@@ -134,6 +141,8 @@ body.has-theme-bar {
       }
     }
     &.theme-bar-button-link {
+      border: 0;
+      margin-right: 0;
       padding: 5px 0px;
       &:hover {
         background-color: transparent;

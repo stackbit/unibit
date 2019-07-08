@@ -23,6 +23,9 @@ body.has-theme-bar #page {
   line-height: 18px;
   font-weight: normal;
 }
+.theme-bar * {
+  box-sizing: border-box;
+}
 .theme-bar.theme-bar-hidden {
   display: none;
 }
@@ -53,25 +56,32 @@ body.has-theme-bar #page {
   background: none;
   height: auto;
 }
+.theme-bar .theme-bar-left {
+  flex: 2;
+}
 .theme-bar .theme-bar-center {
   display: flex;
 }
 .theme-bar .theme-bar-right {
   display: flex;
+  flex: 2;
+  justify-content: flex-end;
 }
 .theme-bar .theme-bar-name {
   font-size: 16px;
   color: #ffffff;
   font-weight: 500;
+  margin-right: 5px;
 }
 .theme-bar .theme-bar-button {
   display: flex;
   align-items: center;
   padding: 6px 20px;
   border-radius: 32px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.8) !important;
   background-color: #031e34;
-  margin-left: 10px;
+  margin-left: 5px;
+  margin-right: 5px;
   transition: border 0.3s ease, color 0.3s ease, background 0.3s ease;
   box-shadow: none;
   justify-content: center;
@@ -79,7 +89,7 @@ body.has-theme-bar #page {
 }
 .theme-bar .theme-bar-button:hover {
   background-color: #02101c;
-  color: #ffffff;
+  color: #ffffff !important;
 }
 .theme-bar .theme-bar-button.theme-bar-button-primary {
   color: #fff;
@@ -116,6 +126,8 @@ body.has-theme-bar #page {
   border: 1px solid #ffffff;
 }
 .theme-bar .theme-bar-button.theme-bar-button-link {
+  border: 0;
+  margin-right: 0;
   padding: 5px 0px;
 }
 .theme-bar .theme-bar-button.theme-bar-button-link:hover {
