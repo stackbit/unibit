@@ -106,8 +106,6 @@ var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
 
 var _fs = _interopRequireDefault(__webpack_require__(/*! fs */ "fs"));
 
-var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
-
 var _ora = _interopRequireDefault(__webpack_require__(/*! ora */ "ora"));
 
 var _downloadGitRepo = _interopRequireDefault(__webpack_require__(/*! download-git-repo */ "download-git-repo"));
@@ -122,19 +120,9 @@ function download(repository, name) {
   if (_fs.default.existsSync(destination)) {
     spinner.fail("Could not create new site. Directory already exists at ".concat(destination, "!"));
     process.exit(1);
-  } // Use of a personal access token is currently required
-  // as the universal theme is in a private repo
-  // once public we can remove this code
+  }
 
-
-  var personalAccessToken = _lodash.default.get(process.env, 'STACKBIT_PERSONAL_ACCESS_TOKEN', null);
-
-  var options = {
-    headers: {
-      Authorization: "token ".concat(personalAccessToken)
-    }
-  };
-  (0, _downloadGitRepo.default)(repository, name, options, function (err) {
+  (0, _downloadGitRepo.default)(repository, name, function (err) {
     if (err) {
       spinner.fail('Could not create new site. Please try again');
       process.exit(1);
@@ -1099,7 +1087,6 @@ if (command === 'build' || command === 'develop') {
 } else if (command === 'init') {
   new _downloader.default('github:stackbithq/stackbit-theme-universal', argv.path);
 }
-
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -2847,7 +2834,6 @@ function () {
 
   return LinkExtension;
 }();
-
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
