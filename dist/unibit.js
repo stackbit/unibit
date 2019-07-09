@@ -1057,7 +1057,6 @@ var buildOptions = function buildOptions(yargs) {
     'with-banner': {
       describe: 'Show stackbit theme banner.',
       boolean: true,
-      default: false,
       defaultDescription: 'Displays the Stackbit theme banner'
     },
     'ugly-urls': {
@@ -1100,6 +1099,7 @@ if (command === 'build' || command === 'develop') {
 } else if (command === 'init') {
   new _downloader.default('github:stackbithq/stackbit-theme-universal', argv.path);
 }
+
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -2523,12 +2523,13 @@ function () {
       var stackbitBanner = _lodash.default.get(stackbitYaml, 'stackbit_banner');
 
       return _lodash.default.assign({
-        show_banner: this.showBanner,
         component: 'stackbit-banner.html',
         name: this.site.config.data.title,
         create_url: "http://app.stackbit.com/create",
         github_url: ""
-      }, stackbitBanner);
+      }, stackbitBanner, {
+        show_banner: this.showBanner
+      });
     }
   }, {
     key: "addPageToRenderQueue",
@@ -2846,6 +2847,7 @@ function () {
 
   return LinkExtension;
 }();
+
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
