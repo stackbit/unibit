@@ -4,7 +4,8 @@
   "description": "Stackbit's static site generator powered by Nunjucks templating language",
   "main": "dist/unibit.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "version-patch": "npm version patch -m \"bumped version to v%s\""
   },
   "repository": {
     "type": "git",
