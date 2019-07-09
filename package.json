@@ -1,6 +1,6 @@
 {
   "name": "@stackbit/unibit",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Stackbit's static site generator powered by Nunjucks templating language",
   "main": "dist/unibit.js",
   "scripts": {
