@@ -87,6 +87,38 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./dist/cms-converters/utils/rename-template-to-layout.js":
+/*!****************************************************************!*\
+  !*** ./dist/cms-converters/utils/rename-template-to-layout.js ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = renameTemplateToLayout;
+
+var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _utils = __webpack_require__(/*! ../../utils */ "./dist/utils/index.js");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function renameTemplateToLayout(models) {
+  _lodash.default.forEach(models, function (model) {
+    if (_lodash.default.get(model, 'type') === 'page') {
+      (0, _utils.rename)(model, 'template', 'layout');
+    }
+  });
+}
+//# sourceMappingURL=rename-template-to-layout.js.map
+
+/***/ }),
+
 /***/ "./dist/downloader/index.js":
 /*!**********************************!*\
   !*** ./dist/downloader/index.js ***!
@@ -168,6 +200,8 @@ var _consts = _interopRequireDefault(__webpack_require__(/*! ./consts */ "./dist
 
 var ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
 
+var _renameTemplateToLayout = _interopRequireDefault(__webpack_require__(/*! ../cms-converters/utils/rename-template-to-layout */ "./dist/cms-converters/utils/rename-template-to-layout.js"));
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -192,29 +226,24 @@ function () {
     var stackbitYamlPath = _utils.default.getFirstExistingFileSync(_consts.default.STACKBIT_YAML_NAMES, this.inputDir);
 
     this.stackbitYamlFileName = _path.default.basename(stackbitYamlPath);
-    this.stackbitYaml = this.loadStackbitYaml(stackbitYamlPath); // for backward compatibility
-
-    if (_lodash.default.has(this.stackbitYaml, 'templatesDir')) {
-      this.stackbitYaml.layoutsDir = this.stackbitYaml.templatesDir;
-      delete this.stackbitYaml.templatesDir;
-    }
+    this.stackbitYaml = this.loadStackbitYaml(stackbitYamlPath);
 
     var ssgName = _lodash.default.get(this.stackbitYaml, 'ssgName', 'unibit');
 
     this.ssgConsts = _lodash.default.cloneDeep(ssgConsts.ssgConstsForSSGType(ssgName));
-    options = _lodash.default.assign({}, this.ssgConsts, _lodash.default.pick(this.stackbitYaml, ['ssgName', 'version', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'staticDir', 'pageTemplateKey', 'pageMenusKey', 'layoutsDir', 'componentsDir']), options);
+    options = _lodash.default.assign({}, this.ssgConsts, _lodash.default.pick(this.stackbitYaml, ['ssgName', 'ssgVersion', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'staticDir', 'pageLayoutKey', 'pageMenusKey', 'layoutsDir', 'componentsDir']), options);
 
     var layoutsDir = _lodash.default.get(options, 'layoutsDir', null);
 
     var componentsDir = _lodash.default.get(options, 'componentsDir', null);
 
     this.ssgName = _lodash.default.get(options, 'ssgName');
-    this.version = _lodash.default.get(options, 'version');
+    this.ssgVersion = _lodash.default.get(options, 'ssgVersion');
     this.configFilePaths = _lodash.default.get(options, 'configFilePaths');
     this.dataDir = _lodash.default.get(options, 'dataDir');
     this.pagesDir = _lodash.default.get(options, 'pagesDir');
     this.staticDir = _lodash.default.get(options, 'staticDir');
-    this.pageTemplateKey = _lodash.default.get(options, 'pageTemplateKey');
+    this.pageLayoutKey = _lodash.default.get(options, 'pageLayoutKey');
     this.pageMenusKey = _lodash.default.get(options, 'pageMenusKey');
     this.layoutsDir = _lodash.default.isNull(layoutsDir) ? null : _path.default.resolve(this.inputDir, layoutsDir);
     this.componentsDir = _lodash.default.isNull(componentsDir) ? null : _path.default.resolve(this.inputDir, componentsDir);
@@ -253,11 +282,11 @@ function () {
       var data = {
         absPath: this.inputDir,
         ssgName: this.ssgName,
-        version: this.version,
+        ssgVersion: this.ssgVersion,
         staticDir: this.staticDir,
         dataDir: this.dataDir,
         pagesDir: this.pagesDir,
-        pageTemplateKey: this.pageTemplateKey,
+        pageLayoutKey: this.pageLayoutKey,
         pageMenusKey: this.pageMenusKey,
         config: this.loadConfig(),
         stackbitYamlFileName: this.stackbitYamlFileName,
@@ -294,8 +323,21 @@ function () {
         return {};
       }
 
-      console.log("[".concat(this.constructor.name, "] loading content model from: ").concat(stackbitYamlPath));
-      return _utils.default.parseFileSync(stackbitYamlPath);
+      console.log("[".concat(this.constructor.name, "] loading ").concat(stackbitYamlPath));
+
+      var stackbitYaml = _utils.default.parseFileSync(stackbitYamlPath); // for backward compatibility: templatesDir => layoutsDir
+
+
+      _utils.default.rename(stackbitYaml, 'templatesDir', 'layoutsDir'); // for backward compatibility: pageTemplateKey => pageLayoutKey
+
+
+      _utils.default.rename(stackbitYaml, 'pageTemplateKey', 'pageLayoutKey'); // for backward compatibility: version => ssgVersion
+
+
+      _utils.default.rename(stackbitYaml, 'version', 'ssgVersion');
+
+      (0, _renameTemplateToLayout.default)(_lodash.default.get(stackbitYaml, 'models'));
+      return stackbitYaml;
     }
   }, {
     key: "loadData",
@@ -400,6 +442,8 @@ function () {
     value: function processPageDir(pageDir) {
       var _this2 = this;
 
+      var ignoredFiles = ['node_modules'];
+
       var absPagesDir = _path.default.resolve(this.inputDir, this.pagesDir);
 
       var pageTree = {
@@ -414,6 +458,10 @@ function () {
         var fileStat = _fs.default.statSync(filePath);
 
         if (fileStat.isDirectory()) {
+          if (_lodash.default.includes(ignoredFiles, fileName)) {
+            return;
+          }
+
           var folder = _this2.processPageDir(filePath);
 
           pageTree.folders.push(folder); // TODO: what if folder name is a number, add folderMap instead
@@ -676,6 +724,8 @@ var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader *
 
 var _base = _interopRequireDefault(__webpack_require__(/*! ../unibit/supporting-files/base.html */ "./dist/unibit/supporting-files/base.html.js"));
 
+var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -742,6 +792,16 @@ function (_BaseLoader) {
         data: _base.default
       });
       return layouts;
+    }
+  }, {
+    key: "parsePageForFilePath",
+    value: function parsePageForFilePath(filePath) {
+      var page = _get(_getPrototypeOf(UnibitLoader.prototype), "parsePageForFilePath", this).call(this, filePath); // Backward compatibility of page.params.template with new page.params.layout
+
+
+      _utils.default.rename(page, 'params.template', 'params.layout');
+
+      return page;
     }
   }, {
     key: "getSiteMenus",
@@ -824,29 +884,53 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var siteProps = ['absPath', 'ssgName', 'version', 'staticDir', 'dataDir', 'pagesDir', 'pageTemplateKey', 'pageMenusKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menuItems'];
+var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'staticDir', 'dataDir', 'pagesDir', 'pageLayoutKey', 'pageMenusKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menuItems'];
 /**
  * @class Site
  *
- * @property {string} absPath Absolute path of the root folder of this theme
- * @property {string} ssgName The name of the Static Site Generator of this theme
- * @property {string} version The version of the Static Site Generator
+ * @property {string} absPath
+ *   Absolute path of the root folder of this theme (set automatically)
+ *
+ * @property {string} ssgName
+ *   The name of the Static Site Generator of this theme
+ *
+ * @property {string} ssgVersion
+ *   The version of the Static Site Generator
+ *
  * @property {string} staticDir
+ *
  * @property {string} dataDir
+ *
  * @property {string} pagesDir
- * @property {string} pageTemplateKey
+ *   The folder, relative to project root, where all markdown pages are located
+ *
+ * @property {string} pageLayoutKey
+ *   The name of the key referencing the layout file of the page
+ *
  * @property {string} pageMenusKey
+ *
  * @property {object} config
+ *
  * @property {string} stackbitYamlFileName
+ *
  * @property {object} stackbitYaml
+ *
  * @property {array} dataFiles
+ *
  * @property {array} layouts
+ *
  * @property {array} components
+ *
  * @property {object} pageTree
+ *
  * @property {object} menus
+ *
  * @property {array} menuNames
+ *
  * @property {object} menusByName
+ *
  * @property {array} pages
+ *
  * @property {object} data
  *
  * @method clone
@@ -1138,14 +1222,14 @@ var BUILD_SCRIPT = './ssg-build.sh';
 exports.BUILD_SCRIPT = BUILD_SCRIPT;
 var JEKYLL = {
   ssgName: SSG_TYPES.JEKYLL,
-  version: '3.8.4',
+  ssgVersion: '3.8.4',
   supportingFilesDirName: 'jekyll',
   configFilePaths: ['_config.yml', '_config.yaml', '_config.toml'],
   menusDataFilePath: 'menus.yml',
   dataDir: '_data',
   pagesDir: '',
   staticDir: '',
-  pageTemplateKey: 'layout',
+  pageLayoutKey: 'layout',
   pageMenusKey: 'menus',
   pageMenuTitleKey: 'title',
   layoutsDir: '_layouts',
@@ -1167,14 +1251,14 @@ var JEKYLL = {
 exports.JEKYLL = JEKYLL;
 var HUGO = {
   ssgName: SSG_TYPES.HUGO,
-  version: '0.47',
+  ssgVersion: '0.47',
   supportingFilesDirName: 'hugo',
   configFilePaths: ['config.yaml', 'config.yml', 'config.toml', 'config.json'],
   menusDataFilePath: null,
   dataDir: 'data',
   pagesDir: 'content',
   staticDir: 'static',
-  pageTemplateKey: 'layout',
+  pageLayoutKey: 'layout',
   pageMenusKey: 'menu',
   pageMenuTitleKey: 'name',
   layoutsDir: 'layouts/_default',
@@ -1203,14 +1287,14 @@ var GATSBY_SCRIPT_INJECT_TOKEN = '{/* put additional scripts here */}';
 var GATSBY_SCRIPT_INJECT_TOKEN_REG_EXP = '\\{\\/\\* put additional scripts here \\*\\/\\}';
 var GATSBY = {
   ssgName: SSG_TYPES.GATSBY,
-  version: '2.3.0',
+  ssgVersion: '2.3.30',
   supportingFilesDirName: 'gatsby',
   configFilePaths: ['site-metadata.json'],
   menusDataFilePath: 'menus.json',
   dataDir: 'src/data',
   pagesDir: 'src/pages',
   staticDir: 'static',
-  pageTemplateKey: 'template',
+  pageLayoutKey: 'template',
   pageMenusKey: 'menus',
   pageMenuTitleKey: 'title',
   layoutsDir: 'src/templates',
@@ -1235,14 +1319,14 @@ var GATSBY = {
 exports.GATSBY = GATSBY;
 var UNIBIT = {
   ssgName: 'unibit',
-  version: '0.1.9',
+  ssgVersion: '0.1.12',
   supportingFilesDirName: null,
   configFilePaths: ['config.yaml', 'config.yml'],
   menusDataFilePath: null,
   dataDir: 'data',
   pagesDir: 'content',
   staticDir: 'static',
-  pageTemplateKey: 'template',
+  pageLayoutKey: 'layout',
   pageMenusKey: 'menus',
   pageMenuTitleKey: 'title',
   layoutsDir: 'layouts',
@@ -2417,7 +2501,13 @@ function () {
       var _this5 = this;
 
       this.pages.forEach(function (page) {
-        page.content = _this5.markdownify(page.markdown);
+        page.content = _this5.markdownify(page.markdown); // backward compatibility with template field
+
+        if (_lodash.default.has(page, 'params.layout')) {
+          page.template = page.params.layout;
+          page.params.template = page.params.layout;
+          page.frontmatter.template = page.params.layout;
+        }
       });
       var pages = this.pages.filter(function (page) {
         return _lodash.default.get(_this5.site.config.data.output, page.relDir, true);
@@ -2548,9 +2638,9 @@ function () {
     value: function renderPage(context) {
       var _this8 = this;
 
-      var templateFile = _lodash.default.get(context.page, 'template', 'body') + '.html';
+      var layoutFile = _lodash.default.get(context.page, ['params', this.site.pageLayoutKey], 'body') + '.html';
       return new Promise(function (resolve, reject) {
-        _this8.env.render(templateFile, context, function (err, res) {
+        _this8.env.render(layoutFile, context, function (err, res) {
           if (err) {
             _this8.logger.error("err:", err);
 
@@ -2872,6 +2962,7 @@ module.exports = {
   copyFilesRecursively: copyFilesRecursively,
   copy: copy,
   copyDefault: copyDefault,
+  rename: rename,
   append: append,
   concat: concat,
   indent: indent,
@@ -3116,6 +3207,20 @@ function copy(sourceObject, sourcePath, targetObject, targetPath, transform) {
 function copyDefault(sourceObject, sourcePath, targetObject, targetPath, transform) {
   if (!_lodash.default.has(targetObject, targetPath)) {
     copy(sourceObject, sourcePath, targetObject, targetPath, transform);
+  }
+}
+
+function rename(object, oldPath, newPath) {
+  if (_lodash.default.has(object, oldPath)) {
+    _lodash.default.set(object, newPath, _lodash.default.get(object, oldPath));
+
+    oldPath = _lodash.default.toPath(oldPath);
+
+    if (oldPath.length > 1) {
+      object = _lodash.default.get(object, _lodash.default.initial(oldPath));
+    }
+
+    delete object[_lodash.default.last(oldPath)];
   }
 }
 
@@ -3417,9 +3522,9 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
   _lodash.default.forEach(site.pages, function (page) {
     var pageFilePath = page.relPath;
 
-    var pageTemplate = _lodash.default.get(page, ['params', site.pageTemplateKey]);
+    var pageLayout = _lodash.default.get(page, ['params', site.pageLayoutKey]);
 
-    assert(pageTemplate, "page '".concat(pageFilePath, "' does not have the '").concat(site.pageTemplateKey, "' field"));
+    assert(pageLayout, "page '".concat(pageFilePath, "' does not have the '").concat(site.pageLayoutKey, "' field"));
 
     var matchedModels = _lodash.default.filter(pageModels, function (model) {
       if (_lodash.default.has(model, 'file')) {
@@ -3434,10 +3539,10 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
         match = joinPathAndGlob(folder, match);
         exclude = joinPathAndGlob(folder, exclude);
 
-        var modelTemplate = _lodash.default.get(model, 'template');
+        var modelLayout = _lodash.default.get(model, 'layout');
 
-        assert(modelTemplate, "model of type 'page' must have 'template' field, model: ".concat(model.name));
-        return pageTemplate === modelTemplate && _micromatch.default.isMatch(pageFilePath, match) && (!exclude || !_micromatch.default.isMatch(pageFilePath, exclude));
+        assert(modelLayout, "model of type 'page' must have 'layout' field, model: ".concat(model.name));
+        return pageLayout === modelLayout && _micromatch.default.isMatch(pageFilePath, match) && (!exclude || !_micromatch.default.isMatch(pageFilePath, exclude));
       }
     });
 
@@ -3685,7 +3790,9 @@ var fieldNameError = 'Invalid field name: must contain only alphanumeric charact
 var StackbitYaml = _joi.default.object({
   stackbitVersion: _joi.default.string().required(),
   ssgName: _joi.default.string(),
-  version: _joi.default.string(),
+  ssgVersion: _joi.default.string(),
+  init_js: _joi.default.string(),
+  page_load_js: _joi.default.string(),
   uploadDir: _joi.default.string(),
   buildCommand: _joi.default.string(),
   publishDir: _joi.default.string(),
@@ -3695,9 +3802,7 @@ var StackbitYaml = _joi.default.object({
   dataDir: _joi.default.string(),
   pagesDir: _joi.default.string().allow(''),
   staticDir: _joi.default.string(),
-  pageTemplateKey: _joi.default.string(),
-  templatesDir: _joi.default.string(),
-  // left for backward compatibility with new layoutsDir
+  pageLayoutKey: _joi.default.string(),
   layoutsDir: _joi.default.string(),
   componentsDir: _joi.default.string(),
   sourceMapping: _joi.default.any(),
@@ -3712,7 +3817,7 @@ var PageModel = _joi.default.object({
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
   description: _joi.default.string(),
-  template: _joi.default.string().required(),
+  layout: _joi.default.string().required(),
   singleInstance: _joi.default.boolean(),
   file: _joi.default.string().when('singleInstance', {
     is: true,
@@ -4275,16 +4380,13 @@ function () {
       var schema = new _schemaBuilder.default(model, this.modelsByName, function (condition, message) {
         return _this6.assert(condition, message);
       }).build();
-      this.validateSchema(page.relPath, _lodash.default.omit(page.params, [this.site.pageTemplateKey || 'template', 'menus']), schema);
+      this.validateSchema(page.relPath, _lodash.default.omit(page.params, [this.site.pageLayoutKey, 'menus']), schema);
       this.assert(!(model.hideContent && !_lodash.default.isEmpty(page.markdown)), "Unexpected content with \"hideContent: true\"");
 
-      var pageTemplate = _lodash.default.get(page.params, this.site.pageTemplateKey);
+      var pageLayoutValue = _lodash.default.get(page.params, this.site.pageLayoutKey);
 
-      if (_lodash.default.isEmpty(pageTemplate)) {
-        this.assert(!_lodash.default.isEmpty(pageTemplate), "[".concat(this.site.pageTemplateKey, "] template parameter is required"));
-      } else {
-        this.assert(model.template === pageTemplate, "Template mismatch \"".concat(model.template, " != ").concat(pageTemplate, "\""));
-      }
+      this.assert(!_lodash.default.isEmpty(pageLayoutValue), "page field '".concat(this.site.pageLayoutKey, "' is required"));
+      this.assert(model.layout === pageLayoutValue, "layout mismatch (models[".concat(model.name, "].layout === '").concat(model.layout, "') !== ").concat(pageLayoutValue, " === ").concat(page.relPath, "[").concat(this.site.pageLayoutKey, "]"));
     }
   }]);
 
