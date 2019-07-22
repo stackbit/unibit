@@ -2899,10 +2899,8 @@ module.exports = {
   outputDataSync: outputDataSync,
   stringifyDataByFilePath: stringifyDataByFilePath,
   deepFreeze: deepFreeze,
-  joinPathAndGlob: joinPathAndGlob,
   failFunctionWithTag: failFunctionWithTag,
   assertFunctionWithFail: assertFunctionWithFail,
-  getPageModelNameByPageFilePath: getPageModelNameByPageFilePath,
   createLogger: createLogger
 };
 
@@ -3410,15 +3408,6 @@ function deepFreeze(obj) {
   return obj;
 }
 
-function joinPathAndGlob(pathStr, glob) {
-  var globParts = _lodash.default.chain(glob).trim('{}').split(',').compact().map(function (globPart) {
-    return _lodash.default.compact([pathStr, globPart]).join('/');
-  }) // should use forward slash even on windows for micromatch
-  .value();
-
-  return globParts.length > 1 ? "{".concat(globParts.join(','), "}") : _lodash.default.head(globParts);
-}
-
 function failFunctionWithTag(tag) {
   return function fail(message) {
     throw new Error("[".concat(tag, "] ").concat(message));
@@ -3431,6 +3420,59 @@ function assertFunctionWithFail(fail) {
       fail(message);
     }
   };
+}
+
+function createLogger(scope, transport) {
+  var levels = ['log', 'info', 'debug', 'error'];
+  var logger = transport || console;
+
+  var noop = function noop() {};
+
+  var obj = {};
+  levels.forEach(function (level) {
+    obj[level] = function () {
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      (logger[level] || noop).apply(void 0, ["[".concat(scope, "]")].concat(args));
+    };
+  });
+  return obj;
+}
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "./dist/utils/map-pages-to-models.js":
+/*!*******************************************!*\
+  !*** ./dist/utils/map-pages-to-models.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.joinPathAndGlob = joinPathAndGlob;
+exports.getPageModelNameByPageFilePath = getPageModelNameByPageFilePath;
+
+var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _micromatch = _interopRequireDefault(__webpack_require__(/*! micromatch */ "micromatch"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function joinPathAndGlob(pathStr, glob) {
+  var globParts = _lodash.default.chain(glob).trim('{}').split(',').compact().map(function (globPart) {
+    return _lodash.default.compact([pathStr, globPart]).join('/');
+  }) // should use forward slash even on windows for micromatch
+  .value();
+
+  return globParts.length > 1 ? "{".concat(globParts.join(','), "}") : _lodash.default.head(globParts);
 }
 
 function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
@@ -3480,26 +3522,7 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
 
   return result;
 }
-
-function createLogger(scope, transport) {
-  var levels = ['log', 'info', 'debug', 'error'];
-  var logger = transport || console;
-
-  var noop = function noop() {};
-
-  var obj = {};
-  levels.forEach(function (level) {
-    obj[level] = function () {
-      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-        args[_key] = arguments[_key];
-      }
-
-      (logger[level] || noop).apply(void 0, ["[".concat(scope, "]")].concat(args));
-    };
-  });
-  return obj;
-}
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=map-pages-to-models.js.map
 
 /***/ }),
 
@@ -4054,9 +4077,9 @@ var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash")
 
 var _joi = _interopRequireDefault(__webpack_require__(/*! @hapi/joi */ "@hapi/joi"));
 
-var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
-
 var _mergeContentModelExtensions = _interopRequireDefault(__webpack_require__(/*! ../utils/merge-content-model-extensions */ "./dist/utils/merge-content-model-extensions.js"));
+
+var _mapPagesToModels = __webpack_require__(/*! ../utils/map-pages-to-models */ "./dist/utils/map-pages-to-models.js");
 
 var _loaders = __webpack_require__(/*! ../loaders */ "./dist/loaders/index.js");
 
@@ -4140,22 +4163,38 @@ function () {
             _this.validateDataFile(dataModels, dataFile);
           });
         });
-
-        var pageModelNameByPageFilePath = _utils.default.getPageModelNameByPageFilePath(this.site, pageModels, _lodash.default.noop, _lodash.default.noop);
-
-        (this.site.pages || []).forEach(function (page) {
-          _this.step(page.relPath, function () {
-            var modelName = pageModelNameByPageFilePath[page.relPath];
-
-            var model = _lodash.default.get(_this.modelsByName, modelName);
-
-            _this.assertModelMap(page, model ? [model] : null);
-
-            if (model) {
-              _this.validatePage(model, page);
-            }
-          });
+        this.renderer.stage('Matching Pages to Models');
+        var pageModelNameByPageFilePath = null;
+        this.step('matching', function () {
+          try {
+            pageModelNameByPageFilePath = (0, _mapPagesToModels.getPageModelNameByPageFilePath)(_this.site, pageModels, function (value, message) {
+              if (!value) {
+                throw new Error(message);
+              }
+            }, function (message) {
+              throw new Error(message);
+            });
+          } catch (e) {
+            _this.errors.push(e.message);
+          }
         });
+        this.renderer.stage('Validating Pages');
+
+        if (pageModelNameByPageFilePath) {
+          (this.site.pages || []).forEach(function (page) {
+            _this.step(page.relPath, function () {
+              var modelName = pageModelNameByPageFilePath[page.relPath];
+
+              var model = _lodash.default.get(_this.modelsByName, modelName);
+
+              _this.assertModelMap(page, model ? [model] : null);
+
+              if (model) {
+                _this.validatePage(model, page);
+              }
+            });
+          });
+        }
       }
 
       this.renderer.results(this.errors);
