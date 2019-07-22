@@ -237,13 +237,15 @@ function () {
 
     var componentsDir = _lodash.default.get(options, 'componentsDir', null);
 
+    var pageLayoutKey = _lodash.default.get(options, 'pageLayoutKey');
+
     this.ssgName = _lodash.default.get(options, 'ssgName');
     this.ssgVersion = _lodash.default.get(options, 'ssgVersion');
     this.configFilePaths = _lodash.default.get(options, 'configFilePaths');
     this.dataDir = _lodash.default.get(options, 'dataDir');
     this.pagesDir = _lodash.default.get(options, 'pagesDir');
     this.staticDir = _lodash.default.get(options, 'staticDir');
-    this.pageLayoutKey = _lodash.default.get(options, 'pageLayoutKey');
+    this.pageLayoutKey = Boolean(pageLayoutKey) ? pageLayoutKey : null;
     this.pageMenusKey = _lodash.default.get(options, 'pageMenusKey');
     this.layoutsDir = _lodash.default.isNull(layoutsDir) ? null : _path.default.resolve(this.inputDir, layoutsDir);
     this.componentsDir = _lodash.default.isNull(componentsDir) ? null : _path.default.resolve(this.inputDir, componentsDir);
@@ -294,7 +296,7 @@ function () {
         dataFiles: this.loadData(),
         layouts: this.loadLayouts(),
         components: this.loadComponents(),
-        pageTree: this.loadPages()
+        pages: this.loadPages()
       };
       data.menuItems = this.createMenuItems(data);
       return new _site.default(data);
@@ -342,6 +344,10 @@ function () {
   }, {
     key: "loadData",
     value: function loadData() {
+      if (!this.dataDir) {
+        return [];
+      }
+
       var absDataDir = _path.default.resolve(this.inputDir, this.dataDir);
 
       if (!_fs.default.existsSync(absDataDir)) {
@@ -434,23 +440,16 @@ function () {
     value: function loadPages() {
       var absPagesDir = _path.default.resolve(this.inputDir, this.pagesDir);
 
+      var ignoredFiled = ['node_modules'];
       console.log("[".concat(this.constructor.name, "] loading pages from: ").concat(absPagesDir));
-      return this.processPageDir(absPagesDir);
+      return this.processPageDir(absPagesDir, ignoredFiled);
     }
   }, {
     key: "processPageDir",
-    value: function processPageDir(pageDir) {
+    value: function processPageDir(pageDir, ignoredFiles) {
       var _this2 = this;
 
-      var ignoredFiles = ['node_modules'];
-
-      var absPagesDir = _path.default.resolve(this.inputDir, this.pagesDir);
-
-      var pageTree = {
-        path: _path.default.relative(absPagesDir, pageDir),
-        pages: [],
-        folders: []
-      };
+      var pages = [];
 
       _fs.default.readdirSync(pageDir).forEach(function (fileName) {
         var filePath = _path.default.resolve(pageDir, fileName);
@@ -462,26 +461,19 @@ function () {
             return;
           }
 
-          var folder = _this2.processPageDir(filePath);
-
-          pageTree.folders.push(folder); // TODO: what if folder name is a number, add folderMap instead
-          // TODO: remove in v0.3
-
-          pageTree.folders[fileName] = folder;
+          pages = pages.concat(_this2.processPageDir(filePath, ignoredFiles));
         } else if (fileStat.isFile()) {
           var page = _this2.parsePageForFilePath(filePath);
 
           if (page) {
-            pageTree.pages.push(page); // TODO: what if name is a number, add pageMap instead
-            // TODO: remove in v0.3
-            // pageTree.pages[page.filename] = page;
+            pages.push(page);
           }
         } else {
           _this2.fail("page file type is not supported: ".concat(filePath));
         }
       });
 
-      return pageTree;
+      return pages;
     }
   }, {
     key: "parsePageForFilePath",
@@ -557,11 +549,9 @@ function () {
     value: function getPageMenus(data) {
       var _this3 = this;
 
-      var pages = _utils.default.flattenPageTree(data.pageTree);
-
       var pageMenuItems = [];
 
-      _lodash.default.forEach(pages, function (page) {
+      _lodash.default.forEach(data.pages, function (page) {
         pageMenuItems = pageMenuItems.concat(_this3.getPageMenuItems(page));
       });
 
@@ -884,7 +874,7 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'staticDir', 'dataDir', 'pagesDir', 'pageLayoutKey', 'pageMenusKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pageTree', 'menuItems'];
+var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'staticDir', 'dataDir', 'pagesDir', 'pageLayoutKey', 'pageMenusKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pages', 'menuItems'];
 /**
  * @class Site
  *
@@ -921,7 +911,7 @@ var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'staticDir', 'dataDir', 'pa
  *
  * @property {array} components
  *
- * @property {object} pageTree
+ * @property {array} pages
  *
  * @property {object} menus
  *
@@ -966,7 +956,6 @@ function () {
   }, {
     key: "addComputedProperties",
     value: function addComputedProperties(siteData) {
-      siteData.pages = _utils.default.flattenPageTree(siteData.pageTree);
       siteData.data = this.mergeData(siteData.dataFiles);
 
       _lodash.default.merge(siteData, this.createMenusFromMenuItems(siteData.menuItems));
@@ -1041,35 +1030,6 @@ function () {
         menus: rootMenus,
         menusByName: menusByName,
         menuNames: menuNames
-      };
-    }
-  }, {
-    key: "clonePageTree",
-    value: function clonePageTree(pageTree) {
-      var _this3 = this;
-
-      if (!pageTree) {
-        return null;
-      }
-
-      var pages = [];
-      pageTree.pages.forEach(function (page) {
-        // let filename = page.filename;
-        var clone = _lodash.default.cloneDeep(page);
-
-        pages.push(clone); // pages[filename] = clone;
-      });
-      var folders = [];
-      pageTree.folders.forEach(function (folder) {
-        // let folderName = path.relative(pageTree.path, folder.path);
-        var clone = _this3.clonePageTree(folder);
-
-        folders.push(clone); // folders[folderName] = clone;
-      });
-      return {
-        path: pageTree.path,
-        pages: pages,
-        folders: folders
       };
     }
   }]);
@@ -2242,10 +2202,6 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -2296,7 +2252,7 @@ function () {
         config: _lodash.default.assign({}, site.config, {
           data: configData
         }),
-        pageTree: uglyUrls ? site.pageTree : this.processPageTree(_lodash.default.cloneDeep(site.pageTree)),
+        pages: uglyUrls ? site.pages : site.pages.map(this.processUrl),
         menuItems: uglyUrls ? site.menuItems : site.menuItems.map(this.processUrl)
       });
       this.pages = _lodash.default.cloneDeep(this.site.pages);
@@ -2395,16 +2351,6 @@ function () {
       this.watcher.reload();
     }
   }, {
-    key: "processPageTree",
-    value: function processPageTree(folder) {
-      var pages = folder.pages.map(this.processUrl, this);
-      var folders = folder.folders.map(this.processPageTree, this);
-      return _objectSpread({}, folder, {
-        pages: pages,
-        folders: folders
-      });
-    }
-  }, {
     key: "processUrl",
     value: function processUrl(currentItem) {
       var item = _lodash.default.cloneDeep(currentItem);
@@ -2414,9 +2360,9 @@ function () {
       var pathComponents = _path.default.parse(item.url);
 
       if (!url.startsWith('http') && !url.startsWith('//')) {
-        if (pathComponents.base.includes('index.htm')) {
-          item.url = item.url.replace(pathComponents.base, '');
-        } else if (pathComponents.ext.includes('htm')) {
+        if (pathComponents.base.match(/^index\.html?$/)) {
+          item.url = item.url.replace(/index\.html?$/, '');
+        } else if (pathComponents.ext.match(/\.html?$/)) {
           item.url = [pathComponents.dir, pathComponents.name].filter(function (p) {
             return p;
           }).join(_path.default.sep) + _path.default.sep;
@@ -2512,10 +2458,9 @@ function () {
       var pages = this.pages.filter(function (page) {
         return _lodash.default.get(_this5.site.config.data.output, page.relDir, true);
       });
-      var pageTree = this.mapFolders(this.site.pageTree);
       this.logger.log('Generating ' + pages.length + ' pages...');
       return _utils.default.forEachPromise(pages, function (page) {
-        var context = _this5.createPageContext(page, pageTree);
+        var context = _this5.createPageContext(page);
 
         return _this5.renderAndSavePage(context, page.url).then(function () {
           var pageRenderQueue = _lodash.default.remove(_this5.pageRenderQueue);
@@ -2526,35 +2471,9 @@ function () {
         });
       });
     }
-    /**
-     * Remove in v0.3
-     */
-
-  }, {
-    key: "mapFolders",
-    value: function mapFolders(pageTree) {
-      var _this6 = this;
-
-      var folders = [];
-
-      _lodash.default.forEach(pageTree.folders, function (folder) {
-        var folderName = _path.default.relative(pageTree.path, folder.path);
-
-        var mapped = _this6.mapFolders(folder);
-
-        folders.push(mapped);
-        folders[folderName] = mapped;
-      });
-
-      return {
-        path: pageTree.path,
-        pages: pageTree.pages,
-        folders: folders
-      };
-    }
   }, {
     key: "createPageContext",
-    value: function createPageContext(page, pageTree) {
+    value: function createPageContext(page) {
       // this.logger.log('Generating page for ' + page.relPath);
       var config = this.site.config.data;
       var stackbitYaml = this.site.stackbitYaml;
@@ -2564,7 +2483,6 @@ function () {
           title: config.title,
           baseurl: config.baseurl,
           pages: this.pages,
-          root: pageTree,
           data: this.site.data,
           menus: this.site.menus,
           params: config.params
@@ -2619,7 +2537,7 @@ function () {
   }, {
     key: "renderAndSavePage",
     value: function renderAndSavePage(context, url) {
-      var _this7 = this;
+      var _this6 = this;
 
       this.assert(this.renderingPage === null, "Trying to generate two pages in parallel");
       var outputUrl = url.match(/\w+\.\w+$/) ? url : _path.default.join(url, 'index.html');
@@ -2628,21 +2546,21 @@ function () {
         outputUrl: outputUrl
       };
       return this.renderPage(context).then(function (res) {
-        _this7.renderingPage = null;
+        _this6.renderingPage = null;
 
-        _this7.savePage(res, outputUrl);
+        _this6.savePage(res, outputUrl);
       });
     }
   }, {
     key: "renderPage",
     value: function renderPage(context) {
-      var _this8 = this;
+      var _this7 = this;
 
       var layoutFile = _lodash.default.get(context.page, ['params', this.site.pageLayoutKey], 'body') + '.html';
       return new Promise(function (resolve, reject) {
-        _this8.env.render(layoutFile, context, function (err, res) {
+        _this7.env.render(layoutFile, context, function (err, res) {
           if (err) {
-            _this8.logger.error("err:", err);
+            _this7.logger.error("err:", err);
 
             reject(err);
           } else {
@@ -2738,7 +2656,7 @@ function () {
   }, {
     key: "paginate",
     value: function paginate(context, items, itemsPerPage) {
-      var _this9 = this;
+      var _this8 = this;
 
       context = _lodash.default.merge({}, context);
       var pagesCount = Math.max(1, Math.ceil(items.length / itemsPerPage));
@@ -2793,7 +2711,7 @@ function () {
           }
         });
 
-        _this9.addPageToRenderQueue(pageContext, outputUrl);
+        _this8.addPageToRenderQueue(pageContext, outputUrl);
       });
 
       return pages[0];
@@ -2985,7 +2903,6 @@ module.exports = {
   failFunctionWithTag: failFunctionWithTag,
   assertFunctionWithFail: assertFunctionWithFail,
   getPageModelNameByPageFilePath: getPageModelNameByPageFilePath,
-  flattenPageTree: flattenPageTree,
   createLogger: createLogger
 };
 
@@ -3521,10 +3438,11 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
 
   _lodash.default.forEach(site.pages, function (page) {
     var pageFilePath = page.relPath;
+    var pageLayout = null;
 
-    var pageLayout = _lodash.default.get(page, ['params', site.pageLayoutKey]);
-
-    assert(pageLayout, "page '".concat(pageFilePath, "' does not have the '").concat(site.pageLayoutKey, "' field"));
+    if (site.pageLayoutKey) {
+      pageLayout = _lodash.default.get(page, ['params', site.pageLayoutKey], null);
+    }
 
     var matchedModels = _lodash.default.filter(pageModels, function (model) {
       if (_lodash.default.has(model, 'file')) {
@@ -3538,11 +3456,16 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
 
         match = joinPathAndGlob(folder, match);
         exclude = joinPathAndGlob(folder, exclude);
+        var layoutMatch = true;
 
-        var modelLayout = _lodash.default.get(model, 'layout');
+        if (pageLayout) {
+          var modelLayout = _lodash.default.get(model, 'layout');
 
-        assert(modelLayout, "model of type 'page' must have 'layout' field, model: ".concat(model.name));
-        return pageLayout === modelLayout && _micromatch.default.isMatch(pageFilePath, match) && (!exclude || !_micromatch.default.isMatch(pageFilePath, exclude));
+          assert(modelLayout, "page model must define 'layout' field when 'pageLayoutKey' is specified in stackbit.yaml, model: ".concat(model.name));
+          layoutMatch = pageLayout === modelLayout;
+        }
+
+        return layoutMatch && _micromatch.default.isMatch(pageFilePath, match) && (!exclude || !_micromatch.default.isMatch(pageFilePath, exclude));
       }
     });
 
@@ -3556,16 +3479,6 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
   });
 
   return result;
-}
-
-function flattenPageTree(pageTree) {
-  var pages = [];
-
-  _lodash.default.get(pageTree, 'folders', []).forEach(function (folder) {
-    pages = pages.concat(flattenPageTree(folder));
-  });
-
-  return pages.concat(_lodash.default.get(pageTree, 'pages', []));
 }
 
 function createLogger(scope, transport) {
@@ -3645,6 +3558,12 @@ function extendModel(model, models, extendedModelsByName) {
 
   if (!_lodash.default.isArray(_extends)) {
     _extends = [_extends];
+    model.extends = _extends;
+  }
+
+  if (!fields) {
+    fields = [];
+    model.fields = fields;
   }
 
   _extendPath.push(model.name);
@@ -3801,7 +3720,7 @@ var StackbitYaml = _joi.default.object({
   models: _joi.default.any(),
   dataDir: _joi.default.string(),
   pagesDir: _joi.default.string().allow(''),
-  staticDir: _joi.default.string(),
+  staticDir: _joi.default.string().allow(''),
   pageLayoutKey: _joi.default.string(),
   layoutsDir: _joi.default.string(),
   componentsDir: _joi.default.string(),
@@ -3817,7 +3736,10 @@ var PageModel = _joi.default.object({
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
   description: _joi.default.string(),
-  layout: _joi.default.string().required(),
+  layout: _joi.default.string().when(_joi.default.ref('$hasPageLayoutKey'), {
+    is: true,
+    then: _joi.default.required()
+  }),
   singleInstance: _joi.default.boolean(),
   file: _joi.default.string().when('singleInstance', {
     is: true,
@@ -3836,6 +3758,7 @@ var PageModel = _joi.default.object({
     then: _joi.default.forbidden()
   }),
   hideContent: _joi.default.boolean(),
+  extends: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$objectModelNames'))),
   fields: _joi.default.array().items(_joi.default.lazy(function () {
     return ModelField;
   }))
@@ -3847,7 +3770,7 @@ var ObjectModel = _joi.default.object({
   label: _joi.default.string().required(),
   description: _joi.default.string(),
   labelField: _joi.default.string(),
-  extends: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$modelNames'))),
+  extends: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$objectModelNames'))),
   fields: _joi.default.array().items(_joi.default.lazy(function () {
     return ModelField;
   }))
@@ -3861,6 +3784,7 @@ var DataModel = _joi.default.object({
   label: _joi.default.string().required(),
   description: _joi.default.string(),
   file: _joi.default.string().required(),
+  extends: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$objectModelNames'))),
   fields: _joi.default.array().items(_joi.default.lazy(function () {
     return ModelField;
   }))
@@ -3871,6 +3795,7 @@ var ConfigModel = _joi.default.object({
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
   description: _joi.default.string(),
+  extends: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$objectModelNames'))),
   fields: _joi.default.array().items(_joi.default.lazy(function () {
     return ModelField;
   }))
@@ -3902,7 +3827,7 @@ var ModelField = _joi.default.object({
   }),
   options: _joi.default.array(),
   labelField: _joi.default.string(),
-  models: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$modelNames'))),
+  models: _joi.default.array().items(_joi.default.valid(_joi.default.ref('$objectModelNames'))),
   format: _joi.default.string(),
   subtype: _joi.default.string()
 }).nand('const', 'default');
@@ -3981,7 +3906,10 @@ function () {
       },
       enum: function _enum(field) {
         if (field.options) {
-          return _joi.default.valid(field.options);
+          var options = field.options.map(function (option) {
+            return _lodash.default.has(option, 'value') ? option.value : option;
+          });
+          return _joi.default.valid(options);
         } // TODO validation for other enum sources
 
 
@@ -4170,17 +4098,13 @@ function () {
 
       this.renderer.stage('Loading Theme');
       this.step("Loading ".concat(this.dirPath), function () {
-        var loadErr;
-
         try {
           _this.site = (0, _loaders.loadSite)({
             inputDir: _this.dirPath
           });
         } catch (err) {
-          loadErr = err;
+          _this.errors.push(err);
         }
-
-        _this.assert(_lodash.default.isEmpty(loadErr), loadErr);
 
         _this.assert(_this.site, "Error loading theme at ".concat(_this.dirPath));
       });
@@ -4270,7 +4194,8 @@ function () {
       var result = _joi.default.validate(val, schema, Object.assign({
         abortEarly: false,
         context: {
-          modelNames: Object.keys(this.modelsByName)
+          objectModelNames: _lodash.default.chain(this.models).filter(['type', 'object']).map('name').value(),
+          hasPageLayoutKey: Boolean(this.site.pageLayoutKey)
         }
       }));
 
@@ -4369,7 +4294,17 @@ function () {
         var schema = new _schemaBuilder.default(models[0], this.modelsByName, function (condition, message) {
           return _this5.assert(condition, message);
         }).build();
-        this.validateSchema(config.relPath, config.data.params, schema);
+        var configData = config.data;
+
+        if (this.site.ssgName === 'unibit') {
+          // in Unibit, config model defines the model of the params
+          configData = configData.params;
+        } else {
+          // in non Unibit site, config model can skip root fields
+          schema = schema.unknown();
+        }
+
+        this.validateSchema(config.relPath, configData, schema);
       }
     }
   }, {
@@ -4380,13 +4315,17 @@ function () {
       var schema = new _schemaBuilder.default(model, this.modelsByName, function (condition, message) {
         return _this6.assert(condition, message);
       }).build();
-      this.validateSchema(page.relPath, _lodash.default.omit(page.params, [this.site.pageLayoutKey, 'menus']), schema);
-      this.assert(!(model.hideContent && !_lodash.default.isEmpty(page.markdown)), "Unexpected content with \"hideContent: true\"");
+      this.validateSchema(page.relPath, _lodash.default.omit(page.params, _lodash.default.compact([this.site.pageLayoutKey, 'menus'])), schema);
+      this.assert(!(model.hideContent && !_lodash.default.isEmpty(page.markdown)), "Unexpected content with \"hideContent: true\""); // pageLayoutKey is not required to be defined in front-matter.
+      // But if it is, it must equal to model.layout
 
-      var pageLayoutValue = _lodash.default.get(page.params, this.site.pageLayoutKey);
+      if (this.site.pageLayoutKey && _lodash.default.has(page.params, this.site.pageLayoutKey)) {
+        var pageLayout = _lodash.default.get(page.params, this.site.pageLayoutKey);
 
-      this.assert(!_lodash.default.isEmpty(pageLayoutValue), "page field '".concat(this.site.pageLayoutKey, "' is required"));
-      this.assert(model.layout === pageLayoutValue, "layout mismatch (models[".concat(model.name, "].layout === '").concat(model.layout, "') !== ").concat(pageLayoutValue, " === ").concat(page.relPath, "[").concat(this.site.pageLayoutKey, "]"));
+        var modelLayout = _lodash.default.get(model, 'layout');
+
+        this.assert(modelLayout === pageLayout, "layout mismatch (models[".concat(model.name, "].layout === '").concat(modelLayout, "') !== ").concat(pageLayout, " === ").concat(page.relPath, "[").concat(this.site.pageLayoutKey, "]"));
+      }
     }
   }]);
 
