@@ -87,38 +87,6 @@
 /************************************************************************/
 /******/ ({
 
-/***/ "./dist/cms-converters/utils/rename-template-to-layout.js":
-/*!****************************************************************!*\
-  !*** ./dist/cms-converters/utils/rename-template-to-layout.js ***!
-  \****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = renameTemplateToLayout;
-
-var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
-
-var _utils = __webpack_require__(/*! ../../utils */ "./dist/utils/index.js");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function renameTemplateToLayout(models) {
-  _lodash.default.forEach(models, function (model) {
-    if (_lodash.default.get(model, 'type') === 'page') {
-      (0, _utils.rename)(model, 'template', 'layout');
-    }
-  });
-}
-//# sourceMappingURL=rename-template-to-layout.js.map
-
-/***/ }),
-
 /***/ "./dist/downloader/index.js":
 /*!**********************************!*\
   !*** ./dist/downloader/index.js ***!
@@ -192,6 +160,8 @@ var _jsYaml = _interopRequireDefault(__webpack_require__(/*! js-yaml */ "js-yaml
 
 var _moment = _interopRequireDefault(__webpack_require__(/*! moment */ "moment"));
 
+var _chalk = _interopRequireDefault(__webpack_require__(/*! chalk */ "chalk"));
+
 var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
 
 var _site = _interopRequireDefault(__webpack_require__(/*! ../models/site */ "./dist/models/site.js"));
@@ -200,7 +170,7 @@ var _consts = _interopRequireDefault(__webpack_require__(/*! ./consts */ "./dist
 
 var ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
 
-var _renameTemplateToLayout = _interopRequireDefault(__webpack_require__(/*! ../cms-converters/utils/rename-template-to-layout */ "./dist/cms-converters/utils/rename-template-to-layout.js"));
+var _modelsLoader = _interopRequireDefault(__webpack_require__(/*! ../utils/models-loader */ "./dist/utils/models-loader.js"));
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
@@ -242,7 +212,7 @@ function () {
     this.ssgName = _lodash.default.get(options, 'ssgName');
     this.ssgVersion = _lodash.default.get(options, 'ssgVersion');
     this.configFilePaths = _lodash.default.get(options, 'configFilePaths');
-    this.dataDir = _lodash.default.get(options, 'dataDir');
+    this.dataDir = _lodash.default.get(options, 'dataDir', '');
     this.pagesDir = _lodash.default.get(options, 'pagesDir');
     this.staticDir = _lodash.default.get(options, 'staticDir');
     this.pageLayoutKey = Boolean(pageLayoutKey) ? pageLayoutKey : null;
@@ -259,6 +229,8 @@ function () {
       buildCommand: this.buildCommand,
       injectLocations: this.injectLocations
     });
+
+    _utils.default.logObject(options, "Configuration");
   }
 
   _createClass(BaseLoader, [{
@@ -310,7 +282,7 @@ function () {
 
       var absPath = _utils.default.getFirstExistingFileSync(this.configFilePaths, this.inputDir);
 
-      this.assert(absPath, "".concat(absPath, " does not exist"));
+      this.assert(absPath, "could not find configuration file ".concat(this.configFilePaths.join(', ')));
       console.log("[".concat(this.constructor.name, "] loading config from: ").concat(absPath));
       return {
         absPath: absPath,
@@ -338,44 +310,47 @@ function () {
 
       _utils.default.rename(stackbitYaml, 'version', 'ssgVersion');
 
-      (0, _renameTemplateToLayout.default)(_lodash.default.get(stackbitYaml, 'models'));
       return stackbitYaml;
     }
   }, {
     key: "loadData",
     value: function loadData() {
-      if (!this.dataDir) {
-        return [];
-      }
+      var _this = this;
 
-      var absDataDir = _path.default.resolve(this.inputDir, this.dataDir);
+      var models = (0, _modelsLoader.default)(this.stackbitYaml.models);
 
-      if (!_fs.default.existsSync(absDataDir)) {
-        return [];
-      }
+      var dataModels = _lodash.default.filter(models, {
+        'type': 'data'
+      });
 
-      console.log("[".concat(this.constructor.name, "] loading data from: ").concat(absDataDir));
-      var dataFiles = [];
+      var allowedExtensions = ['yaml', 'yml', 'toml', 'json'];
+      return _lodash.default.chain(dataModels).map(function (dataModel) {
+        var filePath = dataModel.file;
 
-      var files = _utils.default.readDirRecSync(absDataDir);
+        var extension = _path.default.extname(filePath).substring(1);
 
-      _lodash.default.forEach(files, function (filePath) {
-        var relFilePath = _path.default.relative(absDataDir, filePath);
+        _this.assert(_lodash.default.includes(allowedExtensions, extension), "data file extension not allowed, extension: ".concat(extension, ", model: ").concat(dataModel.name, ", file: ").concat(filePath));
 
-        var pathObject = _path.default.parse(relFilePath);
+        var absFilePath = _path.default.resolve(_this.inputDir, _this.dataDir, filePath);
 
-        var data = _utils.default.parseFileSync(filePath);
+        if (!_fs.default.existsSync(absFilePath)) {
+          return null;
+        }
 
-        dataFiles.push({
-          absPath: filePath,
-          relPath: relFilePath,
+        console.log("[".concat(_this.constructor.name, "] loading data file from: ").concat(absFilePath));
+
+        var pathObject = _path.default.parse(filePath);
+
+        var data = _utils.default.parseFileSync(absFilePath);
+
+        return {
+          absPath: absFilePath,
+          relPath: filePath,
           basename: pathObject.base,
           filename: pathObject.name,
           data: data
-        });
-      });
-
-      return dataFiles;
+        };
+      }).compact().value();
     }
   }, {
     key: "loadLayouts",
@@ -400,7 +375,7 @@ function () {
   }, {
     key: "loadFiles",
     value: function loadFiles(dirPath) {
-      var _this = this;
+      var _this2 = this;
 
       var files = [];
 
@@ -410,11 +385,11 @@ function () {
         var fileStat = _fs.default.statSync(filePath);
 
         if (fileStat.isFile()) {
-          var component = _this.loadFile(filePath, dirPath);
+          var component = _this2.loadFile(filePath, dirPath);
 
           files.push(component);
         } else {
-          _this.fail("directory '".concat(dirPath, "' must include files only"));
+          _this2.fail("directory '".concat(dirPath, "' must include files only"));
         }
       });
 
@@ -438,6 +413,10 @@ function () {
   }, {
     key: "loadPages",
     value: function loadPages() {
+      if (_lodash.default.isNil(this.pagesDir)) {
+        this.fail("Could not find the pages directory. \n    ".concat(_chalk.default.cyan("Please define the directory where your content is located. Typically this is the folder with your .md files. \n    Set a value for \"pagesDir\" in the stackbit.yaml")));
+      }
+
       var absPagesDir = _path.default.resolve(this.inputDir, this.pagesDir);
 
       var ignoredFiled = ['node_modules'];
@@ -447,7 +426,7 @@ function () {
   }, {
     key: "processPageDir",
     value: function processPageDir(pageDir, ignoredFiles) {
-      var _this2 = this;
+      var _this3 = this;
 
       var pages = [];
 
@@ -461,15 +440,15 @@ function () {
             return;
           }
 
-          pages = pages.concat(_this2.processPageDir(filePath, ignoredFiles));
+          pages = pages.concat(_this3.processPageDir(filePath, ignoredFiles));
         } else if (fileStat.isFile()) {
-          var page = _this2.parsePageForFilePath(filePath);
+          var page = _this3.parsePageForFilePath(filePath);
 
           if (page) {
             pages.push(page);
           }
         } else {
-          _this2.fail("page file type is not supported: ".concat(filePath));
+          _this3.fail("page file type is not supported: ".concat(filePath));
         }
       });
 
@@ -547,12 +526,12 @@ function () {
   }, {
     key: "getPageMenus",
     value: function getPageMenus(data) {
-      var _this3 = this;
+      var _this4 = this;
 
       var pageMenuItems = [];
 
       _lodash.default.forEach(data.pages, function (page) {
-        pageMenuItems = pageMenuItems.concat(_this3.getPageMenuItems(page));
+        pageMenuItems = pageMenuItems.concat(_this4.getPageMenuItems(page));
       });
 
       return pageMenuItems;
@@ -560,7 +539,7 @@ function () {
   }, {
     key: "getPageMenuItems",
     value: function getPageMenuItems(page) {
-      var menus = _lodash.default.get(page, this.ssgConsts.pageMenusKey, null);
+      var menus = _lodash.default.get(page, this.pageMenusKey, null);
 
       if (!menus || !_lodash.default.isPlainObject(menus)) {
         return [];
@@ -633,6 +612,10 @@ Object.defineProperty(exports, "UnibitLoader", {
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
+var _chalk = _interopRequireDefault(__webpack_require__(/*! chalk */ "chalk"));
+
+var _figures = _interopRequireDefault(__webpack_require__(/*! figures */ "figures"));
+
 var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
 
 var _unibitLoader = _interopRequireDefault(__webpack_require__(/*! ./unibit-loader */ "./dist/loaders/unibit-loader.js"));
@@ -662,7 +645,14 @@ function loadSite(options) {
 
   var stackbitYaml = _utils.default.parseFileSync(stackbitYamlPath);
 
-  var ssgName = _lodash.default.get(stackbitYaml, 'ssgName', 'unibit');
+  var ssgName = _lodash.default.get(stackbitYaml, 'ssgName');
+
+  if (!ssgName) {
+    ssgName = 'unibit';
+    console.log("ssgName: ".concat(_chalk.default.magenta(ssgName), " ").concat(_chalk.default.gray("(\"ssgName\" was not defined in the ".concat(_consts.default.STACKBIT_YAML, " so a default value of \"ssgName: unibit\" has been assigned. If this theme is not built with Unibit you should set this value to \"ssgName: custom\" in the stackbit.yaml to avoid incorrect default settings.)")), "\n "));
+  } else {
+    console.log("ssgName: ".concat(_chalk.default.magenta(ssgName), "\n "));
+  }
 
   if (!ssgName) {
     throw new Error("can not load site, ssgName must be defined in: ".concat(stackbitYamlPath));
@@ -701,6 +691,8 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.default = void 0;
+
+var _fs = _interopRequireDefault(__webpack_require__(/*! fs */ "fs"));
 
 var _fsExtra = _interopRequireDefault(__webpack_require__(/*! fs-extra */ "fs-extra"));
 
@@ -766,6 +758,42 @@ function (_BaseLoader) {
   }
 
   _createClass(UnibitLoader, [{
+    key: "loadData",
+    value: function loadData() {
+      // Here we override the BaseLoader loadData() method because loading
+      // data files in Unibit is different. All data files inside the
+      // "data" folder are data files. As a consequence, all these data files
+      // must have matching model in stackbit.yaml
+      var absDataDir = _path.default.resolve(this.inputDir, ssgConsts.UNIBIT.dataDir);
+
+      if (!_fs.default.existsSync(absDataDir)) {
+        return [];
+      }
+
+      console.log("[".concat(this.constructor.name, "] loading data from: ").concat(absDataDir));
+      var allowedExtensions = ['yaml', 'yml', 'toml', 'json'];
+
+      var files = _utils.default.readDirRecSync(absDataDir);
+
+      return _lodash.default.chain(files).filter(function (filePath) {
+        return _lodash.default.includes(allowedExtensions, _path.default.extname(filePath).substring(1));
+      }).map(function (filePath) {
+        var relFilePath = _path.default.relative(absDataDir, filePath);
+
+        var pathObject = _path.default.parse(relFilePath);
+
+        var data = _utils.default.parseFileSync(filePath);
+
+        return {
+          absPath: filePath,
+          relPath: relFilePath,
+          basename: pathObject.base,
+          filename: pathObject.name,
+          data: data
+        };
+      }).value();
+    }
+  }, {
     key: "loadLayouts",
     value: function loadLayouts() {
       var layouts = _get(_getPrototypeOf(UnibitLoader.prototype), "loadLayouts", this).call(this);
@@ -921,8 +949,6 @@ var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'staticDir', 'dataDir', 'pa
  *
  * @property {array} pages
  *
- * @property {object} data
- *
  * @method clone
  */
 
@@ -956,24 +982,7 @@ function () {
   }, {
     key: "addComputedProperties",
     value: function addComputedProperties(siteData) {
-      siteData.data = this.mergeData(siteData.dataFiles);
-
       _lodash.default.merge(siteData, this.createMenusFromMenuItems(siteData.menuItems));
-    }
-  }, {
-    key: "mergeData",
-    value: function mergeData(dataFiles) {
-      var data = {};
-
-      _lodash.default.forEach(dataFiles, function (dataFile) {
-        var pathObject = _path.default.parse(dataFile.relPath);
-
-        var props = _lodash.default.chain(pathObject.dir).split(_path.default.sep).concat(pathObject.name).compact().value();
-
-        _lodash.default.set(data, props, dataFile.data);
-      });
-
-      return data;
     }
   }, {
     key: "createMenusFromMenuItems",
@@ -2256,6 +2265,7 @@ function () {
         menuItems: uglyUrls ? site.menuItems : site.menuItems.map(this.processUrl)
       });
       this.pages = _lodash.default.cloneDeep(this.site.pages);
+      this.siteData = this.mergeData(this.site.dataFiles);
       this.showBanner = typeof this.withBanner === 'boolean' ? this.withBanner : _lodash.default.get(this.site, 'stackbitYaml.stackbit_banner.show_banner', false);
       this.loadNunjucksEnv();
     }
@@ -2270,6 +2280,21 @@ function () {
       if (!value) {
         this.fail(message);
       }
+    }
+  }, {
+    key: "mergeData",
+    value: function mergeData(dataFiles) {
+      var siteData = {};
+
+      _lodash.default.forEach(dataFiles, function (dataFile) {
+        var pathObject = _path.default.parse(dataFile.relPath);
+
+        var props = _lodash.default.chain(pathObject.dir).split(_path.default.sep).concat(pathObject.name).compact().value();
+
+        _lodash.default.set(siteData, props, dataFile.data);
+      });
+
+      return siteData;
     }
   }, {
     key: "generate",
@@ -2483,7 +2508,7 @@ function () {
           title: config.title,
           baseurl: config.baseurl,
           pages: this.pages,
-          data: this.site.data,
+          data: this.siteData,
           menus: this.site.menus,
           params: config.params
         },
@@ -2868,7 +2893,9 @@ var _jsYaml = _interopRequireDefault(__webpack_require__(/*! js-yaml */ "js-yaml
 
 var _toml = _interopRequireDefault(__webpack_require__(/*! @iarna/toml */ "@iarna/toml"));
 
-var _micromatch = _interopRequireDefault(__webpack_require__(/*! micromatch */ "micromatch"));
+var _chalk = _interopRequireDefault(__webpack_require__(/*! chalk */ "chalk"));
+
+var _figures = _interopRequireDefault(__webpack_require__(/*! figures */ "figures"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -2901,7 +2928,8 @@ module.exports = {
   deepFreeze: deepFreeze,
   failFunctionWithTag: failFunctionWithTag,
   assertFunctionWithFail: assertFunctionWithFail,
-  createLogger: createLogger
+  createLogger: createLogger,
+  logObject: logObject
 };
 
 var INDENT = _lodash.default.repeat(' ', 4);
@@ -3440,6 +3468,17 @@ function createLogger(scope, transport) {
   });
   return obj;
 }
+
+function logObject(object, title) {
+  var label = title ? title : "";
+  console.group(label);
+
+  _lodash.default.forEach(object, function (value, key) {
+    console.log("  ".concat(key, ": ").concat(_chalk.default.green(value)));
+  });
+
+  console.groupEnd(label);
+}
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -3526,10 +3565,10 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
 
 /***/ }),
 
-/***/ "./dist/utils/merge-content-model-extensions.js":
-/*!******************************************************!*\
-  !*** ./dist/utils/merge-content-model-extensions.js ***!
-  \******************************************************/
+/***/ "./dist/utils/model-extender.js":
+/*!**************************************!*\
+  !*** ./dist/utils/model-extender.js ***!
+  \**************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -3539,7 +3578,7 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = mergeContentModelExtensions;
+exports.default = extendModels;
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
@@ -3551,25 +3590,22 @@ var fail = _index.default.failFunctionWithTag('extendContentModels');
 
 var assert = _index.default.assertFunctionWithFail(fail);
 
-function mergeContentModelExtensions(models) {
-  models = _lodash.default.cloneDeep(models);
-  var extendedModelsByName = {};
-  return _lodash.default.map(models, function (model, modelName) {
-    model.name = modelName;
-    return extendModel(model, models, extendedModelsByName);
+function extendModels(models) {
+  var memorized = _lodash.default.memoize(extendModel, function (model) {
+    return model.name;
+  });
+
+  var modelsByName = _lodash.default.keyBy(models, 'name');
+
+  return _lodash.default.map(models, function (model) {
+    return memorized(model, modelsByName);
   });
 }
 
-function extendModel(model, models, extendedModelsByName) {
-  var _extendPath = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+function extendModel(model, modelsByName) {
+  var _extendPath = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : [];
 
   assert(!_lodash.default.includes(_extendPath, model.name), "cyclic dependency detected in model extend tree: ".concat(_extendPath.join(' -> '), " -> ").concat(model.name));
-
-  if (_lodash.default.has(extendedModelsByName, model.name)) {
-    return extendedModelsByName[model.name];
-  }
-
-  extendedModelsByName[model.name] = model;
 
   var _extends = _lodash.default.get(model, 'extends');
 
@@ -3592,11 +3628,11 @@ function extendModel(model, models, extendedModelsByName) {
   _extendPath.push(model.name);
 
   _lodash.default.forEach(_extends, function (superModelName) {
-    var superModel = _lodash.default.get(models, superModelName);
+    var superModel = _lodash.default.get(modelsByName, superModelName);
 
     assert(superModel, "model '".concat(model.name, "' extends non defined model '").concat(superModelName, "'"));
     assert(superModel.type === 'object', "only object model types can be extended");
-    superModel = extendModel(superModel, models, extendedModelsByName, _extendPath);
+    superModel = extendModel(superModel, modelsByName, _extendPath);
 
     _index.default.copyDefault(superModel, 'hideContent', model, 'hideContent');
 
@@ -3623,7 +3659,73 @@ function extendModel(model, models, extendedModelsByName) {
 
   return model;
 }
-//# sourceMappingURL=merge-content-model-extensions.js.map
+//# sourceMappingURL=model-extender.js.map
+
+/***/ }),
+
+/***/ "./dist/utils/models-loader.js":
+/*!*************************************!*\
+  !*** ./dist/utils/models-loader.js ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = loadModels;
+
+var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _index = __webpack_require__(/*! ./index */ "./dist/utils/index.js");
+
+var _modelExtender = _interopRequireDefault(__webpack_require__(/*! ./model-extender */ "./dist/utils/model-extender.js"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function loadModels(modelMap) {
+  modelMap = _lodash.default.cloneDeep(modelMap);
+
+  var models = _lodash.default.map(modelMap, function (model, modelName) {
+    model.name = modelName;
+    renameTemplateToLayout(model);
+    addFieldLabelsIfNeeded(model);
+    return model;
+  });
+
+  models = (0, _modelExtender.default)(models);
+  return models;
+}
+
+function renameTemplateToLayout(model) {
+  if (_lodash.default.get(model, 'type') === 'page') {
+    (0, _index.rename)(model, 'template', 'layout');
+  }
+}
+
+function addFieldLabelsIfNeeded(model) {
+  var fields = _lodash.default.get(model, 'fields', []);
+
+  _lodash.default.forEach(fields, function (field) {
+    if (!_lodash.default.has(field, 'label')) {
+      field.label = _lodash.default.startCase(field.name);
+    }
+
+    if (field.type === 'object') {
+      addFieldLabelsIfNeeded(field);
+    } else if (isListOfObjectsField(field)) {
+      addFieldLabelsIfNeeded(_lodash.default.get(field, 'items'));
+    }
+  });
+}
+
+function isListOfObjectsField(field) {
+  return _lodash.default.includes(['list', 'array'], field.type) && _lodash.default.get(field, 'items.type', 'string') === 'object';
+}
+//# sourceMappingURL=models-loader.js.map
 
 /***/ }),
 
@@ -3725,25 +3827,31 @@ var _joi = _interopRequireDefault(__webpack_require__(/*! @hapi/joi */ "@hapi/jo
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var modelNamePattern = /^[a-z]([a-z0-9_]*[a-z0-9])?$/;
-var modelNameError = 'Invalid model name: must contain only lower case alphanumeric characters and underscores (but not at the edges of the name) and start with a letter. See documentation for more details.';
-var fieldNamePattern = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
-var fieldNameError = 'Invalid field name: must contain only alphanumeric characters, hyphens and underscores (but not at the edges of the name) and start with a letter. See documentation for more details.';
+var modelNameError = 'Invalid model name: must contain only lower case alphanumeric characters and underscores, must start with a lower case letter, and end with alphanumeric character.';
+var fieldNamePattern = /^[a-zA-Z0-9]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+var fieldNameError = 'Invalid field name: must contain only alphanumeric characters, hyphens and underscores, and must start and end with an alphanumeric character.';
+
+var joiModelName = _joi.default.string().regex(modelNamePattern).error(function (errors) {
+  return errors.map(function (err) {
+    return "[".concat(err.context.value, "] ").concat(modelNameError);
+  }).join('\n');
+}).required();
 
 var StackbitYaml = _joi.default.object({
   stackbitVersion: _joi.default.string().required(),
-  ssgName: _joi.default.string(),
+  ssgName: _joi.default.string().valid('unibit', 'jekyll', 'hugo', 'gatsby', 'custom'),
   ssgVersion: _joi.default.string(),
   init_js: _joi.default.string(),
   page_load_js: _joi.default.string(),
-  uploadDir: _joi.default.string(),
-  buildCommand: _joi.default.string(),
-  publishDir: _joi.default.string(),
+  uploadDir: _joi.default.string().required(),
+  buildCommand: _joi.default.string().required(),
+  publishDir: _joi.default.string().required(),
   collections: _joi.default.any(),
   injectLocations: _joi.default.any(),
   models: _joi.default.any(),
-  dataDir: _joi.default.string(),
-  pagesDir: _joi.default.string().allow(''),
-  staticDir: _joi.default.string().allow(''),
+  dataDir: _joi.default.string().allow(''),
+  pagesDir: _joi.default.string().allow('').required(),
+  staticDir: _joi.default.string().allow('').required(),
   pageLayoutKey: _joi.default.string(),
   layoutsDir: _joi.default.string(),
   componentsDir: _joi.default.string(),
@@ -3753,9 +3861,7 @@ var StackbitYaml = _joi.default.object({
 });
 
 var PageModel = _joi.default.object({
-  name: _joi.default.string().regex(modelNamePattern).error(function () {
-    return modelNameError;
-  }).required(),
+  name: joiModelName,
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
   description: _joi.default.string(),
@@ -3788,7 +3894,7 @@ var PageModel = _joi.default.object({
 });
 
 var ObjectModel = _joi.default.object({
-  name: _joi.default.string().regex(modelNamePattern).required(),
+  name: joiModelName,
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
   description: _joi.default.string(),
@@ -3800,9 +3906,7 @@ var ObjectModel = _joi.default.object({
 });
 
 var DataModel = _joi.default.object({
-  name: _joi.default.string().regex(modelNamePattern).error(function () {
-    return modelNameError;
-  }).required(),
+  name: joiModelName,
   type: _joi.default.string().required(),
   label: _joi.default.string().required(),
   description: _joi.default.string(),
@@ -3826,10 +3930,12 @@ var ConfigModel = _joi.default.object({
 
 var ModelField = _joi.default.object({
   type: _joi.default.string().required(),
-  name: _joi.default.string().regex(fieldNamePattern).error(function () {
-    return fieldNameError;
+  name: _joi.default.string().regex(fieldNamePattern).error(function (errors) {
+    return errors.map(function (err) {
+      return "[".concat(err.context.value, "] ").concat(fieldNameError);
+    }).join('\n');
   }).required(),
-  label: _joi.default.string().required(),
+  label: _joi.default.string(),
   description: _joi.default.string().allow(''),
   required: _joi.default.boolean(),
   default: _joi.default.any(),
@@ -4077,7 +4183,9 @@ var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash")
 
 var _joi = _interopRequireDefault(__webpack_require__(/*! @hapi/joi */ "@hapi/joi"));
 
-var _mergeContentModelExtensions = _interopRequireDefault(__webpack_require__(/*! ../utils/merge-content-model-extensions */ "./dist/utils/merge-content-model-extensions.js"));
+var _modelsLoader = _interopRequireDefault(__webpack_require__(/*! ../utils/models-loader */ "./dist/utils/models-loader.js"));
+
+var _utils = __webpack_require__(/*! ../utils */ "./dist/utils/index.js");
 
 var _mapPagesToModels = __webpack_require__(/*! ../utils/map-pages-to-models */ "./dist/utils/map-pages-to-models.js");
 
@@ -4134,7 +4242,7 @@ function () {
 
       if (this.site) {
         this.renderer.stage('Validating Model');
-        this.models = (0, _mergeContentModelExtensions.default)(this.site.stackbitYaml.models);
+        this.models = (0, _modelsLoader.default)(this.site.stackbitYaml.models);
         this.modelsByName = _lodash.default.keyBy(this.models, 'name');
 
         var pageModels = _lodash.default.filter(this.models, {
@@ -4153,19 +4261,22 @@ function () {
         this.renderer.stage('Validating Data');
 
         if (!_lodash.default.isEmpty(configModels)) {
-          this.step(this.site.config.relPath, function () {
-            _this.validateConfig(configModels, _this.site.config);
-          });
+          if (_lodash.default.get(this.site, "config.relPath")) {
+            this.step(this.site.config.relPath, function () {
+              _this.validateConfig(configModels, _this.site.config);
+            });
+          }
         }
 
-        (this.site.dataFiles || []).forEach(function (dataFile) {
+        _lodash.default.forEach(this.site.dataFiles, function (dataFile) {
           _this.step(dataFile.relPath, function () {
             _this.validateDataFile(dataModels, dataFile);
           });
         });
-        this.renderer.stage('Matching Pages to Models');
+
+        this.renderer.stage('Validating Pages');
         var pageModelNameByPageFilePath = null;
-        this.step('matching', function () {
+        this.step('matching pages to models', function () {
           try {
             pageModelNameByPageFilePath = (0, _mapPagesToModels.getPageModelNameByPageFilePath)(_this.site, pageModels, function (value, message) {
               if (!value) {
@@ -4178,23 +4289,18 @@ function () {
             _this.errors.push(e.message);
           }
         });
-        this.renderer.stage('Validating Pages');
 
-        if (pageModelNameByPageFilePath) {
-          (this.site.pages || []).forEach(function (page) {
-            _this.step(page.relPath, function () {
-              var modelName = pageModelNameByPageFilePath[page.relPath];
+        _lodash.default.forEach(this.site.pages, function (page) {
+          var modelName = _lodash.default.get(pageModelNameByPageFilePath, page.relPath);
 
-              var model = _lodash.default.get(_this.modelsByName, modelName);
+          if (modelName) {
+            var model = _lodash.default.get(_this.modelsByName, modelName);
 
-              _this.assertModelMap(page, model ? [model] : null);
-
-              if (model) {
-                _this.validatePage(model, page);
-              }
+            _this.step(model.name + ' ⇔ ' + page.relPath, function () {
+              _this.validatePage(model, page);
             });
-          });
-        }
+          }
+        });
       }
 
       this.renderer.results(this.errors);
@@ -4205,10 +4311,15 @@ function () {
       return _lodash.default.isEmpty(this.errors);
     }
   }, {
+    key: "error",
+    value: function error(message) {
+      this.errors.push(message);
+    }
+  }, {
     key: "assert",
     value: function assert(condition, message) {
       if (!condition) {
-        this.errors.push(message);
+        this.error(message);
       }
 
       return condition;
@@ -4216,8 +4327,13 @@ function () {
   }, {
     key: "assertModelMap",
     value: function assertModelMap(obj, models) {
-      this.assert(!_lodash.default.isEmpty(models), "Couldn't find file in content model");
-      this.assert(_lodash.default.isEmpty(models) || models.length === 1, "Appears multiple times in content model");
+      if (_lodash.default.isEmpty(models)) {
+        this.error("Couldn't find model for file '".concat(obj.relPath, "'"));
+      } else if (_lodash.default.size(models) > 1) {
+        this.error("Found multiple models [".concat(_lodash.default.map(models, function (model) {
+          return model.name;
+        }).join(', '), "] for file '").concat(obj.relPath, "'"));
+      }
     }
   }, {
     key: "step",
@@ -4242,7 +4358,7 @@ function () {
         var _this$errors;
 
         var messages = (result.error.details || []).map(function (err) {
-          return "[".concat(err.path.join('.'), "] ").concat(err.message);
+          return "[".concat((0, _utils.fieldPathToString)(err.path), "] ").concat(err.message);
         });
 
         (_this$errors = this.errors).push.apply(_this$errors, _toConsumableArray(messages));
@@ -4269,12 +4385,14 @@ function () {
     value: function validateStackbitYaml() {
       var _this2 = this;
 
-      this.step('stackbit.yml', function () {
-        _this2.validateSchema('stackbit.yml', _this2.site.stackbitYaml, _modelSchema.default.StackbitYaml);
+      this.step('stackbit.yaml', function () {
+        _this2.validateSchema('stackbit.yaml', _this2.site.stackbitYaml, _modelSchema.default.StackbitYaml);
       });
       this.models.forEach(function (model) {
-        _this2.step(model.name, function () {
-          _this2.validateModelSchema(model.name, model);
+        var context = 'models.' + model.name;
+
+        _this2.step(context, function () {
+          _this2.validateModelSchema(context, model);
 
           _this2.validateModelFields(model);
         });
