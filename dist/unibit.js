@@ -201,7 +201,7 @@ function () {
     var ssgName = _lodash.default.get(this.stackbitYaml, 'ssgName', 'unibit');
 
     this.ssgConsts = _lodash.default.cloneDeep(ssgConsts.ssgConstsForSSGType(ssgName));
-    options = _lodash.default.assign({}, this.ssgConsts, _lodash.default.pick(this.stackbitYaml, ['ssgName', 'ssgVersion', 'buildCommand', 'publishDir', 'injectLocations', 'dataDir', 'pagesDir', 'staticDir', 'pageLayoutKey', 'pageMenusKey', 'layoutsDir', 'componentsDir']), options);
+    options = _lodash.default.assign({}, this.ssgConsts, _lodash.default.pick(this.stackbitYaml, ['ssgName', 'ssgVersion', 'buildCommand', 'publishDir', 'dataDir', 'pagesDir', 'staticDir', 'pageLayoutKey', 'pageMenusKey', 'layoutsDir', 'componentsDir']), options);
 
     var layoutsDir = _lodash.default.get(options, 'layoutsDir', null);
 
@@ -221,13 +221,11 @@ function () {
     this.componentsDir = _lodash.default.isNull(componentsDir) ? null : _path.default.resolve(this.inputDir, componentsDir);
     this.publishDir = _lodash.default.get(options, 'publishDir');
     this.buildCommand = _lodash.default.get(options, 'buildCommand');
-    this.injectLocations = _lodash.default.get(options, 'injectLocations', null);
 
     _lodash.default.defaults(this.stackbitYaml, {
       ssgName: this.ssgName,
       publishDir: this.publishDir,
-      buildCommand: this.buildCommand,
-      injectLocations: this.injectLocations
+      buildCommand: this.buildCommand
     });
 
     _utils.default.logObject(options, "Configuration");
@@ -562,6 +560,7 @@ function () {
 }();
 
 exports.default = BaseLoader;
+
 //# sourceMappingURL=base-loader.js.map
 
 /***/ }),
@@ -673,6 +672,7 @@ function loaderForSSGName(ssgName) {
     return _baseLoader.default;
   }
 }
+
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -869,6 +869,7 @@ function (_BaseLoader) {
 }(_baseLoader.default);
 
 exports.default = UnibitLoader;
+
 //# sourceMappingURL=unibit-loader.js.map
 
 /***/ }),
@@ -1140,6 +1141,7 @@ if (command === 'build' || command === 'develop') {
 } else if (command === 'init') {
   new _downloader.default('github:stackbithq/stackbit-theme-universal', argv.path);
 }
+
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -2867,6 +2869,7 @@ function () {
 
   return LinkExtension;
 }();
+
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -2894,8 +2897,6 @@ var _jsYaml = _interopRequireDefault(__webpack_require__(/*! js-yaml */ "js-yaml
 var _toml = _interopRequireDefault(__webpack_require__(/*! @iarna/toml */ "@iarna/toml"));
 
 var _chalk = _interopRequireDefault(__webpack_require__(/*! chalk */ "chalk"));
-
-var _figures = _interopRequireDefault(__webpack_require__(/*! figures */ "figures"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -3479,6 +3480,7 @@ function logObject(object, title) {
 
   console.groupEnd(label);
 }
+
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -3659,6 +3661,7 @@ function extendModel(model, modelsByName) {
 
   return model;
 }
+
 //# sourceMappingURL=model-extender.js.map
 
 /***/ }),
@@ -3725,6 +3728,7 @@ function addFieldLabelsIfNeeded(model) {
 function isListOfObjectsField(field) {
   return _lodash.default.includes(['list', 'array'], field.type) && _lodash.default.get(field, 'items.type', 'string') === 'object';
 }
+
 //# sourceMappingURL=models-loader.js.map
 
 /***/ }),
@@ -3857,7 +3861,8 @@ var StackbitYaml = _joi.default.object({
   componentsDir: _joi.default.string(),
   sourceMapping: _joi.default.any(),
   metadata: _joi.default.any(),
-  stackbit_banner: _joi.default.any()
+  stackbit_banner: _joi.default.any(),
+  cmsConfig: _joi.default.any()
 });
 
 var PageModel = _joi.default.object({
@@ -4491,6 +4496,7 @@ function () {
 
 exports.default = Validator;
 ;
+
 //# sourceMappingURL=validator.js.map
 
 /***/ }),
