@@ -162,6 +162,8 @@ var _moment = _interopRequireDefault(__webpack_require__(/*! moment */ "moment")
 
 var _chalk = _interopRequireDefault(__webpack_require__(/*! chalk */ "chalk"));
 
+var _micromatch = _interopRequireDefault(__webpack_require__(/*! micromatch */ "micromatch"));
+
 var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
 
 var _site = _interopRequireDefault(__webpack_require__(/*! ../models/site */ "./dist/models/site.js"));
@@ -171,6 +173,8 @@ var _consts = _interopRequireDefault(__webpack_require__(/*! ./consts */ "./dist
 var ssgConsts = _interopRequireWildcard(__webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js"));
 
 var _modelsLoader = _interopRequireDefault(__webpack_require__(/*! ../utils/models-loader */ "./dist/utils/models-loader.js"));
+
+var _stackbitYamlLoader = __webpack_require__(/*! ./stackbit-yaml-loader */ "./dist/loaders/stackbit-yaml-loader.js");
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
@@ -195,40 +199,47 @@ function () {
 
     var stackbitYamlPath = _utils.default.getFirstExistingFileSync(_consts.default.STACKBIT_YAML_NAMES, this.inputDir);
 
-    this.stackbitYamlFileName = _path.default.basename(stackbitYamlPath);
-    this.stackbitYaml = this.loadStackbitYaml(stackbitYamlPath);
+    if (stackbitYamlPath) {
+      this.stackbitYamlFileName = _path.default.basename(stackbitYamlPath);
+      this.stackbitYaml = (0, _stackbitYamlLoader.loadStackbitYaml)(stackbitYamlPath);
+    } else {
+      // This case is for Unibit only
+      // TODO: when we will separate UnibitLoader we can remove this case
+      this.stackbitYamlFileName = null;
+      this.stackbitYaml = {};
+    }
 
     var ssgName = _lodash.default.get(this.stackbitYaml, 'ssgName', 'unibit');
 
-    this.ssgConsts = _lodash.default.cloneDeep(ssgConsts.ssgConstsForSSGType(ssgName));
-    options = _lodash.default.assign({}, this.ssgConsts, _lodash.default.pick(this.stackbitYaml, ['ssgName', 'ssgVersion', 'buildCommand', 'publishDir', 'dataDir', 'pagesDir', 'staticDir', 'pageLayoutKey', 'pageMenusKey', 'layoutsDir', 'componentsDir']), options);
+    this.ssgConsts = _lodash.default.cloneDeep(ssgConsts.ssgConstsForSSGType(ssgName)); // Here we allow overriding some ssgConsts by stackbitYaml
+    // TODO: these props are used for non Unibit themes, and for Unibit themes
+    //       they are always the same, so basically we can remove them.
+    //       The exception here is the layoutsDir which loads layouts and
+    //       is used in non-unibit-converter.js when ssgName is jekyll (hack for the alembic theme)
 
-    var layoutsDir = _lodash.default.get(options, 'layoutsDir', null);
+    var settings = _lodash.default.assign({}, this.ssgConsts, _lodash.default.pick(this.stackbitYaml, ['pageMenusKey', 'layoutsDir', 'componentsDir'])); // Build site configuration
 
-    var componentsDir = _lodash.default.get(options, 'componentsDir', null);
 
-    var pageLayoutKey = _lodash.default.get(options, 'pageLayoutKey');
+    this.ssgName = _lodash.default.get(this.stackbitYaml, 'ssgName');
+    this.ssgVersion = _lodash.default.get(this.stackbitYaml, 'ssgVersion');
+    this.buildCommand = _lodash.default.get(this.stackbitYaml, 'buildCommand');
+    this.publishDir = _lodash.default.get(this.stackbitYaml, 'publishDir');
+    this.staticDir = _lodash.default.get(this.stackbitYaml, 'staticDir');
+    this.dataDir = _lodash.default.get(this.stackbitYaml, 'dataDir', '');
+    this.pagesDir = _lodash.default.get(this.stackbitYaml, 'pagesDir');
+    this.pageLayoutKey = _lodash.default.get(this.stackbitYaml, 'pageLayoutKey');
+    this.excludePages = _lodash.default.get(this.stackbitYaml, 'excludePages');
+    this.configFilePaths = _lodash.default.get(settings, 'configFilePaths');
+    this.pageMenusKey = _lodash.default.get(settings, 'pageMenusKey');
 
-    this.ssgName = _lodash.default.get(options, 'ssgName');
-    this.ssgVersion = _lodash.default.get(options, 'ssgVersion');
-    this.configFilePaths = _lodash.default.get(options, 'configFilePaths');
-    this.dataDir = _lodash.default.get(options, 'dataDir', '');
-    this.pagesDir = _lodash.default.get(options, 'pagesDir');
-    this.staticDir = _lodash.default.get(options, 'staticDir');
-    this.pageLayoutKey = Boolean(pageLayoutKey) ? pageLayoutKey : null;
-    this.pageMenusKey = _lodash.default.get(options, 'pageMenusKey');
+    var layoutsDir = _lodash.default.get(settings, 'layoutsDir', null);
+
+    var componentsDir = _lodash.default.get(settings, 'componentsDir', null);
+
     this.layoutsDir = _lodash.default.isNull(layoutsDir) ? null : _path.default.resolve(this.inputDir, layoutsDir);
     this.componentsDir = _lodash.default.isNull(componentsDir) ? null : _path.default.resolve(this.inputDir, componentsDir);
-    this.publishDir = _lodash.default.get(options, 'publishDir');
-    this.buildCommand = _lodash.default.get(options, 'buildCommand');
 
-    _lodash.default.defaults(this.stackbitYaml, {
-      ssgName: this.ssgName,
-      publishDir: this.publishDir,
-      buildCommand: this.buildCommand
-    });
-
-    _utils.default.logObject(options, "Configuration");
+    _utils.default.logObject(_lodash.default.pick(this.stackbitYaml, ['stackbitVersion', 'ssgName', 'buildCommand', 'publishDir', 'staticDir', 'dataDir', 'pagesDir', 'pageLayoutKey', 'excludePages']), 'Site Configuration');
   }
 
   _createClass(BaseLoader, [{
@@ -255,6 +266,8 @@ function () {
         absPath: this.inputDir,
         ssgName: this.ssgName,
         ssgVersion: this.ssgVersion,
+        buildCommand: this.buildCommand,
+        publishDir: this.publishDir,
         staticDir: this.staticDir,
         dataDir: this.dataDir,
         pagesDir: this.pagesDir,
@@ -289,28 +302,6 @@ function () {
       };
     }
   }, {
-    key: "loadStackbitYaml",
-    value: function loadStackbitYaml(stackbitYamlPath) {
-      if (!stackbitYamlPath) {
-        return {};
-      }
-
-      console.log("[".concat(this.constructor.name, "] loading ").concat(stackbitYamlPath));
-
-      var stackbitYaml = _utils.default.parseFileSync(stackbitYamlPath); // for backward compatibility: templatesDir => layoutsDir
-
-
-      _utils.default.rename(stackbitYaml, 'templatesDir', 'layoutsDir'); // for backward compatibility: pageTemplateKey => pageLayoutKey
-
-
-      _utils.default.rename(stackbitYaml, 'pageTemplateKey', 'pageLayoutKey'); // for backward compatibility: version => ssgVersion
-
-
-      _utils.default.rename(stackbitYaml, 'version', 'ssgVersion');
-
-      return stackbitYaml;
-    }
-  }, {
     key: "loadData",
     value: function loadData() {
       var _this = this;
@@ -324,6 +315,8 @@ function () {
       var allowedExtensions = ['yaml', 'yml', 'toml', 'json'];
       return _lodash.default.chain(dataModels).map(function (dataModel) {
         var filePath = dataModel.file;
+
+        _this.assert(dataModel.file, "\"".concat(dataModel.label, "\" has no \"file\" field.\n    ").concat(_chalk.default.cyan("Please add a \"file\" field to this data model. The value should be the filename of the data file relative to the dataDir folder. This field is required.")));
 
         var extension = _path.default.extname(filePath).substring(1);
 
@@ -417,28 +410,35 @@ function () {
 
       var absPagesDir = _path.default.resolve(this.inputDir, this.pagesDir);
 
-      var ignoredFiled = ['node_modules'];
+      var excludePages = _lodash.default.concat(['node_modules', '.git', '.DS_Store', this.publishDir], this.excludePages || []);
+
       console.log("[".concat(this.constructor.name, "] loading pages from: ").concat(absPagesDir));
-      return this.processPageDir(absPagesDir, ignoredFiled);
+      return this.processPageDir(absPagesDir, excludePages);
     }
   }, {
     key: "processPageDir",
-    value: function processPageDir(pageDir, ignoredFiles) {
+    value: function processPageDir(pageDir, excludePages) {
       var _this3 = this;
+
+      var absPagesDir = _path.default.resolve(this.inputDir, this.pagesDir);
 
       var pages = [];
 
       _fs.default.readdirSync(pageDir).forEach(function (fileName) {
         var filePath = _path.default.resolve(pageDir, fileName);
 
+        var relFilePath = _path.default.relative(absPagesDir, filePath);
+
+        if (_lodash.default.some(excludePages, function (exclude) {
+          return _micromatch.default.isMatch(relFilePath, exclude);
+        })) {
+          return;
+        }
+
         var fileStat = _fs.default.statSync(filePath);
 
         if (fileStat.isDirectory()) {
-          if (_lodash.default.includes(ignoredFiles, fileName)) {
-            return;
-          }
-
-          pages = pages.concat(_this3.processPageDir(filePath, ignoredFiles));
+          pages = pages.concat(_this3.processPageDir(filePath, excludePages));
         } else if (fileStat.isFile()) {
           var page = _this3.parsePageForFilePath(filePath);
 
@@ -467,7 +467,7 @@ function () {
         return null;
       }
 
-      var index = data.indexOf('\n---\n');
+      var index = data.indexOf('\n---');
 
       if (index === -1) {
         return null;
@@ -560,7 +560,6 @@ function () {
 }();
 
 exports.default = BaseLoader;
-
 //# sourceMappingURL=base-loader.js.map
 
 /***/ }),
@@ -612,8 +611,6 @@ Object.defineProperty(exports, "UnibitLoader", {
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
 var _chalk = _interopRequireDefault(__webpack_require__(/*! chalk */ "chalk"));
-
-var _figures = _interopRequireDefault(__webpack_require__(/*! figures */ "figures"));
 
 var _baseLoader = _interopRequireDefault(__webpack_require__(/*! ./base-loader */ "./dist/loaders/base-loader.js"));
 
@@ -672,8 +669,95 @@ function loaderForSSGName(ssgName) {
     return _baseLoader.default;
   }
 }
-
 //# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ "./dist/loaders/stackbit-yaml-loader.js":
+/*!**********************************************!*\
+  !*** ./dist/loaders/stackbit-yaml-loader.js ***!
+  \**********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.loadStackbitYamlFromDir = loadStackbitYamlFromDir;
+exports.loadStackbitYaml = loadStackbitYaml;
+
+var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
+
+var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
+
+var _consts = _interopRequireDefault(__webpack_require__(/*! ./consts */ "./dist/loaders/consts.js"));
+
+var _consts2 = __webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function loadStackbitYamlFromDir(inputDir) {
+  var stackbitYamlPath = _utils.default.getFirstExistingFileSync(_consts.default.STACKBIT_YAML_NAMES, inputDir);
+
+  return stackbitYamlPath ? loadStackbitYaml(stackbitYamlPath) : null;
+}
+
+function loadStackbitYaml(stackbitYamlPath) {
+  var stackbitYaml = _utils.default.parseFileSync(stackbitYamlPath);
+
+  backwardCompatibleStackbitYaml(stackbitYaml);
+  stackbitYaml = setStackbitYamlDefaults(stackbitYaml);
+  stackbitYaml = sortStackbitYamlFields(stackbitYaml);
+  return stackbitYaml;
+}
+
+function backwardCompatibleStackbitYaml(stackbitYaml) {
+  // for backward compatibility: templatesDir => layoutsDir
+  _utils.default.rename(stackbitYaml, 'templatesDir', 'layoutsDir'); // for backward compatibility: pageTemplateKey => pageLayoutKey
+
+
+  _utils.default.rename(stackbitYaml, 'pageTemplateKey', 'pageLayoutKey'); // for backward compatibility: version => ssgVersion
+
+
+  _utils.default.rename(stackbitYaml, 'version', 'ssgVersion');
+}
+/**
+ * We need to set default values for specific SSGs, specifically values required
+ * by the validator. Even thought some values might be missing when ssgName is not
+ * custom, validator still requires them.
+ *
+ * @param {Object} stackbitYaml
+ */
+
+
+function setStackbitYamlDefaults(stackbitYaml) {
+  // if ssgName was not set, assume 'unibit'
+  var ssgName = _lodash.default.get(stackbitYaml, 'ssgName', _consts2.SSG_TYPES.UNIBIT);
+
+  var ssgConsts = _lodash.default.cloneDeep((0, _consts2.ssgConstsForSSGType)(ssgName)); // Set default values if ssgName is one of 'unibit', 'gatsby', 'hugo', 'jekyll'
+  // If ssgName is 'custom' no default values are set because no ssgConsts exist for 'custom'
+
+
+  return _lodash.default.defaults({}, stackbitYaml, _lodash.default.pick(ssgConsts, ['ssgName', 'ssgVersion', 'buildCommand', 'publishDir', 'staticDir', 'dataDir', 'pagesDir', 'pageLayoutKey']));
+}
+/**
+ * Put important and required properties at the top and models at the bottom,
+ * and the rest of the properties can appear as they were in original file.
+ *
+ * @param stackbitYaml
+ */
+
+
+function sortStackbitYamlFields(stackbitYaml) {
+  var firstProps = ['stackbitVersion', 'ssgName', 'ssgVersion', 'buildCommand', 'publishDir', 'staticDir', 'uploadDir', 'dataDir', 'pagesDir', 'pageLayoutKey'];
+  return _lodash.default.assign(_lodash.default.pick(stackbitYaml, firstProps), _lodash.default.omit(stackbitYaml, firstProps.concat('models')), {
+    models: _lodash.default.get(stackbitYaml, 'models')
+  });
+}
+//# sourceMappingURL=stackbit-yaml-loader.js.map
 
 /***/ }),
 
@@ -869,7 +953,6 @@ function (_BaseLoader) {
 }(_baseLoader.default);
 
 exports.default = UnibitLoader;
-
 //# sourceMappingURL=unibit-loader.js.map
 
 /***/ }),
@@ -891,8 +974,6 @@ exports.default = void 0;
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
-var _path = _interopRequireDefault(__webpack_require__(/*! path */ "path"));
-
 var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -903,7 +984,7 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'staticDir', 'dataDir', 'pagesDir', 'pageLayoutKey', 'pageMenusKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pages', 'menuItems'];
+var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'buildCommand', 'publishDir', 'staticDir', 'dataDir', 'pagesDir', 'pageLayoutKey', 'pageMenusKey', 'config', 'stackbitYamlFileName', 'stackbitYaml', 'dataFiles', 'layouts', 'components', 'pages', 'menuItems'];
 /**
  * @class Site
  *
@@ -915,6 +996,12 @@ var siteProps = ['absPath', 'ssgName', 'ssgVersion', 'staticDir', 'dataDir', 'pa
  *
  * @property {string} ssgVersion
  *   The version of the Static Site Generator
+ *
+ * @property {string} buildCommand
+ *   The build command that builds the static site
+ *
+ * @property {string} publishDir
+ *   The folder with the generated static site files
  *
  * @property {string} staticDir
  *
@@ -1141,7 +1228,6 @@ if (command === 'build' || command === 'develop') {
 } else if (command === 'init') {
   new _downloader.default('github:stackbithq/stackbit-theme-universal', argv.path);
 }
-
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -1178,7 +1264,8 @@ var SSG_TYPES = {
   HUGO: 'hugo',
   HEXO: 'hexo',
   GATSBY: 'gatsby',
-  VUEPRESS: 'vuepress'
+  VUEPRESS: 'vuepress',
+  UNIBIT: 'unibit'
 };
 exports.SSG_TYPES = SSG_TYPES;
 var HTML_HEAD_COMPONENT_FILE_NAME = 'html_head.html';
@@ -1289,7 +1376,7 @@ var GATSBY = {
 };
 exports.GATSBY = GATSBY;
 var UNIBIT = {
-  ssgName: 'unibit',
+  ssgName: SSG_TYPES.UNIBIT,
   ssgVersion: '0.1.12',
   supportingFilesDirName: null,
   configFilePaths: ['config.yaml', 'config.yml'],
@@ -2209,6 +2296,8 @@ var filters = _interopRequireWildcard(__webpack_require__(/*! ./filters */ "./di
 
 var _utils = _interopRequireDefault(__webpack_require__(/*! ../utils */ "./dist/utils/index.js"));
 
+var _consts = __webpack_require__(/*! ../ssg-converters/consts */ "./dist/ssg-converters/consts.js");
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -2251,10 +2340,10 @@ function () {
   _createClass(Unibit, [{
     key: "loadSite",
     value: function loadSite() {
-      this.loader = new _unibitLoader.default({
+      var loader = new _unibitLoader.default({
         inputDir: this.inputDir
       });
-      var site = this.loader.loadSite();
+      var site = loader.loadSite();
 
       var configData = _lodash.default.merge({}, site.config.data, this.inputConfig);
 
@@ -2369,7 +2458,8 @@ function () {
         return;
       }
 
-      var dirs = [this.site.pagesDir, this.site.dataDir, this.site.staticDir, this.site.stackbitYamlFileName, this.site.config.absPath, this.loader.componentsDir, this.loader.layoutsDir, 'sass'].filter(function (d) {
+      var dirs = [this.site.pagesDir, this.site.dataDir, this.site.staticDir, this.site.stackbitYamlFileName, this.site.config.absPath, _consts.UNIBIT.componentsDir, _consts.UNIBIT.layoutsDir, 'templates', // for backward compatibility with newer "layouts"
+      'sass'].filter(function (d) {
         return d;
       }).map(function (dir) {
         return _path.default.resolve(_this4.site.absPath, dir);
@@ -2613,7 +2703,8 @@ function () {
   }, {
     key: "loadNunjucksEnv",
     value: function loadNunjucksEnv() {
-      var fileSystemLoader = new _nunjucks.default.FileSystemLoader([this.loader.layoutsDir, this.loader.componentsDir]);
+      var fileSystemLoader = new _nunjucks.default.FileSystemLoader([_consts.UNIBIT.layoutsDir, 'templates', // for backward compatibility with newer "layouts"
+      _consts.UNIBIT.componentsDir]);
       this.env = new _nunjucks.default.Environment([fileSystemLoader, new _unibitNunjucksLoader.default()]);
       this.env.addFilter('relative_url', this.relativeUrl.bind(this));
       this.env.addFilter('date_format', filters.dateFormat);
@@ -2869,7 +2960,6 @@ function () {
 
   return LinkExtension;
 }();
-
 //# sourceMappingURL=unibit.js.map
 
 /***/ }),
@@ -2930,7 +3020,8 @@ module.exports = {
   failFunctionWithTag: failFunctionWithTag,
   assertFunctionWithFail: assertFunctionWithFail,
   createLogger: createLogger,
-  logObject: logObject
+  logObject: logObject,
+  globToArray: globToArray
 };
 
 var INDENT = _lodash.default.repeat(' ', 4);
@@ -3198,7 +3289,7 @@ function pascalCase(str) {
   return _lodash.default.upperFirst(_lodash.default.camelCase(str));
 }
 
-function readDirRecSync(dir) {
+function readDirRecSync(dir, options) {
   var list = [];
 
   var files = _fs.default.readdirSync(dir);
@@ -3206,10 +3297,14 @@ function readDirRecSync(dir) {
   _lodash.default.forEach(files, function (file) {
     var filePath = _path.default.join(dir, file);
 
+    if (_lodash.default.has(options, 'filter') && !options.filter(filePath)) {
+      return;
+    }
+
     var stats = _fs.default.statSync(filePath);
 
     if (stats.isDirectory()) {
-      list = list.concat(readDirRecSync(filePath));
+      list = list.concat(readDirRecSync(filePath, options));
     } else if (stats.isFile()) {
       list.push(filePath);
     }
@@ -3475,12 +3570,23 @@ function logObject(object, title) {
   console.group(label);
 
   _lodash.default.forEach(object, function (value, key) {
-    console.log("  ".concat(key, ": ").concat(_chalk.default.green(value)));
+    if (_lodash.default.isString(value)) {
+      value = "\"".concat(value, "\"");
+    }
+
+    console.log("".concat(key, ": ").concat(_chalk.default.green(value)));
   });
 
   console.groupEnd(label);
 }
 
+function globToArray(glob) {
+  return _lodash.default.chain(glob).castArray().compact().reduce(function (accum, globPart) {
+    var globParts = _lodash.default.chain(globPart).trim('{}').split(',').compact().value();
+
+    return _lodash.default.concat(accum, globParts);
+  }, []).value();
+}
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -3498,26 +3604,29 @@ function logObject(object, title) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.joinPathAndGlob = joinPathAndGlob;
 exports.getPageModelNameByPageFilePath = getPageModelNameByPageFilePath;
 
 var _lodash = _interopRequireDefault(__webpack_require__(/*! lodash */ "lodash"));
 
 var _micromatch = _interopRequireDefault(__webpack_require__(/*! micromatch */ "micromatch"));
 
+var _index = __webpack_require__(/*! ./index */ "./dist/utils/index.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function joinPathAndGlob(pathStr, glob) {
-  var globParts = _lodash.default.chain(glob).trim('{}').split(',').compact().map(function (globPart) {
+  glob = (0, _index.globToArray)(glob);
+  return _lodash.default.map(glob, function (globPart) {
     return _lodash.default.compact([pathStr, globPart]).join('/');
-  }) // should use forward slash even on windows for micromatch
-  .value();
-
-  return globParts.length > 1 ? "{".concat(globParts.join(','), "}") : _lodash.default.head(globParts);
+  });
 }
 
 function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
   var result = {};
+
+  var singleInstancePageFiles = _lodash.default.chain(pageModels).filter(_lodash.default.matches({
+    singleInstance: true
+  })).map('file').value();
 
   _lodash.default.forEach(site.pages, function (page) {
     var pageFilePath = page.relPath;
@@ -3535,10 +3644,11 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
 
         var match = _lodash.default.get(model, 'match', '**/*');
 
-        var exclude = _lodash.default.get(model, 'exclude', null);
+        var exclude = _lodash.default.get(model, 'exclude', []);
 
         match = joinPathAndGlob(folder, match);
         exclude = joinPathAndGlob(folder, exclude);
+        exclude = _lodash.default.concat(exclude, singleInstancePageFiles);
         var layoutMatch = true;
 
         if (pageLayout) {
@@ -3548,7 +3658,7 @@ function getPageModelNameByPageFilePath(site, pageModels, assert, fail) {
           layoutMatch = pageLayout === modelLayout;
         }
 
-        return layoutMatch && _micromatch.default.isMatch(pageFilePath, match) && (!exclude || !_micromatch.default.isMatch(pageFilePath, exclude));
+        return layoutMatch && _micromatch.default.isMatch(pageFilePath, match) && (_lodash.default.isEmpty(exclude) || !_micromatch.default.isMatch(pageFilePath, exclude));
       }
     });
 
@@ -3661,7 +3771,6 @@ function extendModel(model, modelsByName) {
 
   return model;
 }
-
 //# sourceMappingURL=model-extender.js.map
 
 /***/ }),
@@ -3728,7 +3837,6 @@ function addFieldLabelsIfNeeded(model) {
 function isListOfObjectsField(field) {
   return _lodash.default.includes(['list', 'array'], field.type) && _lodash.default.get(field, 'items.type', 'string') === 'object';
 }
-
 //# sourceMappingURL=models-loader.js.map
 
 /***/ }),
@@ -3845,18 +3953,19 @@ var StackbitYaml = _joi.default.object({
   stackbitVersion: _joi.default.string().required(),
   ssgName: _joi.default.string().valid('unibit', 'jekyll', 'hugo', 'gatsby', 'custom'),
   ssgVersion: _joi.default.string(),
-  init_js: _joi.default.string(),
-  page_load_js: _joi.default.string(),
-  uploadDir: _joi.default.string().required(),
   buildCommand: _joi.default.string().required(),
   publishDir: _joi.default.string().required(),
+  staticDir: _joi.default.string().allow('').required(),
+  uploadDir: _joi.default.string().required(),
+  pagesDir: _joi.default.string().allow('').required(),
+  dataDir: _joi.default.string().allow(''),
+  pageLayoutKey: _joi.default.string(),
+  excludePages: _joi.default.array().items(_joi.default.string()).single(),
+  models: _joi.default.any(),
+  init_js: _joi.default.string(),
+  page_load_js: _joi.default.string(),
   collections: _joi.default.any(),
   injectLocations: _joi.default.any(),
-  models: _joi.default.any(),
-  dataDir: _joi.default.string().allow(''),
-  pagesDir: _joi.default.string().allow('').required(),
-  staticDir: _joi.default.string().allow('').required(),
-  pageLayoutKey: _joi.default.string(),
   layoutsDir: _joi.default.string(),
   componentsDir: _joi.default.string(),
   sourceMapping: _joi.default.any(),
@@ -3883,11 +3992,11 @@ var PageModel = _joi.default.object({
     is: true,
     then: _joi.default.forbidden()
   }),
-  match: _joi.default.string().when('singleInstance', {
+  match: _joi.default.array().items(_joi.default.string()).single().when('singleInstance', {
     is: true,
     then: _joi.default.forbidden()
   }),
-  exclude: _joi.default.string().when('singleInstance', {
+  exclude: _joi.default.array().items(_joi.default.string()).single().when('singleInstance', {
     is: true,
     then: _joi.default.forbidden()
   }),
@@ -4194,6 +4303,8 @@ var _utils = __webpack_require__(/*! ../utils */ "./dist/utils/index.js");
 
 var _mapPagesToModels = __webpack_require__(/*! ../utils/map-pages-to-models */ "./dist/utils/map-pages-to-models.js");
 
+var _stackbitYamlLoader = __webpack_require__(/*! ../loaders/stackbit-yaml-loader */ "./dist/loaders/stackbit-yaml-loader.js");
+
 var _loaders = __webpack_require__(/*! ../loaders */ "./dist/loaders/index.js");
 
 var _modelSchema = _interopRequireDefault(__webpack_require__(/*! ./model-schema */ "./dist/validator/model-schema.js"));
@@ -4232,24 +4343,34 @@ function () {
     value: function validate() {
       var _this = this;
 
-      this.renderer.stage('Loading Theme');
-      this.step("Loading ".concat(this.dirPath), function () {
-        try {
-          _this.site = (0, _loaders.loadSite)({
-            inputDir: _this.dirPath
-          });
-        } catch (err) {
-          _this.errors.push(err);
-        }
+      this.renderer.stage('Validating Model');
+      this.step("loading stackbit.yaml", function () {
+        _this.stackbitYaml = (0, _stackbitYamlLoader.loadStackbitYamlFromDir)(_this.dirPath);
 
-        _this.assert(_this.site, "Error loading theme at ".concat(_this.dirPath));
+        if (!_this.stackbitYaml) {
+          _this.error("stackbit.yaml file not found in ".concat(_this.dirPath));
+        }
       });
 
-      if (this.site) {
-        this.renderer.stage('Validating Model');
-        this.models = (0, _modelsLoader.default)(this.site.stackbitYaml.models);
+      if (this.stackbitYaml) {
+        this.models = (0, _modelsLoader.default)(this.stackbitYaml.models);
         this.modelsByName = _lodash.default.keyBy(this.models, 'name');
+        this.validateStackbitYaml();
+        this.renderer.stage('Loading Theme');
+        this.step("Loading site ".concat(this.dirPath), function () {
+          try {
+            _this.site = (0, _loaders.loadSite)({
+              inputDir: _this.dirPath
+            });
+          } catch (err) {
+            _this.errors.push(err);
+          }
 
+          _this.assert(_this.site, "Error loading theme at ".concat(_this.dirPath));
+        });
+      }
+
+      if (this.site) {
         var pageModels = _lodash.default.filter(this.models, {
           'type': 'page'
         });
@@ -4262,7 +4383,6 @@ function () {
           'type': 'config'
         });
 
-        this.validateStackbitYaml();
         this.renderer.stage('Validating Data');
 
         if (!_lodash.default.isEmpty(configModels)) {
@@ -4355,7 +4475,7 @@ function () {
         abortEarly: false,
         context: {
           objectModelNames: _lodash.default.chain(this.models).filter(['type', 'object']).map('name').value(),
-          hasPageLayoutKey: Boolean(this.site.pageLayoutKey)
+          hasPageLayoutKey: Boolean(this.stackbitYaml.pageLayoutKey)
         }
       }));
 
@@ -4390,8 +4510,8 @@ function () {
     value: function validateStackbitYaml() {
       var _this2 = this;
 
-      this.step('stackbit.yaml', function () {
-        _this2.validateSchema('stackbit.yaml', _this2.site.stackbitYaml, _modelSchema.default.StackbitYaml);
+      this.step('validating stackbit.yaml fields', function () {
+        _this2.validateSchema('stackbit.yaml', _this2.stackbitYaml, _modelSchema.default.StackbitYaml);
       });
       this.models.forEach(function (model) {
         var context = 'models.' + model.name;
@@ -4496,7 +4616,6 @@ function () {
 
 exports.default = Validator;
 ;
-
 //# sourceMappingURL=validator.js.map
 
 /***/ }),
