@@ -2703,8 +2703,8 @@ function () {
   }, {
     key: "loadNunjucksEnv",
     value: function loadNunjucksEnv() {
-      var fileSystemLoader = new _nunjucks.default.FileSystemLoader([_consts.UNIBIT.layoutsDir, 'templates', // for backward compatibility with newer "layouts"
-      _consts.UNIBIT.componentsDir]);
+      var fileSystemLoader = new _nunjucks.default.FileSystemLoader([_path.default.resolve(this.inputDir, _consts.UNIBIT.layoutsDir), _path.default.resolve(this.inputDir, 'templates'), // for backward compatibility with newer "layouts"
+      _path.default.resolve(this.inputDir, _consts.UNIBIT.componentsDir)]);
       this.env = new _nunjucks.default.Environment([fileSystemLoader, new _unibitNunjucksLoader.default()]);
       this.env.addFilter('relative_url', this.relativeUrl.bind(this));
       this.env.addFilter('date_format', filters.dateFormat);
