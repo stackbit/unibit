@@ -1,5 +1,5 @@
 module.exports = `<!doctype html>
-<html>
+<html lang="en">
     <head>    
         {% if stackbit_banner.show_banner %}<link rel="stylesheet" type="text/css" href={{ "assets/css/stackbit-banner.css" | relative_url }}>{% endif %}
         {% include "html_head.html" %}
