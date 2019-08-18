@@ -2141,6 +2141,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
     <a
       class="theme-bar-button theme-bar-button-outlined"
       href="{% if stackbit_banner.github_url %}{{ stackbit_banner.github_url }}{% endif %}"
+      alt="Fork demo on Github"
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
         <path
@@ -2155,6 +2156,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
     <a
       class="theme-bar-button theme-bar-button-primary"
       href="{{ stackbit_banner.create_url }}"
+      alt="Generate new site"
     >
       <svg fill="currentColor" viewBox="0 0 131 107">
         <defs>
@@ -2173,6 +2175,8 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
     <button
       id="remove-theme-bar"
       class="theme-bar-button theme-bar-button-link"
+      role="button"
+      aria-label="Hide theme banner"
     >
       <svg viewBox="0 0 320 512" class="remove-icon">
         <path
