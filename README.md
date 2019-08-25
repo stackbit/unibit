@@ -1,6 +1,9 @@
 # Unibit
 
-Unibit is a superset of existing static site generators, if you build a theme according to the [Unibit spec](https://docs.stackbit.com/unibit/) then [Stackbit](https://www.stackbit.com) will be able to convert (transpile) it into a host of target SSGs. 
+Unibit is a superset of existing static site generators, if you build a theme
+according to the [Unibit spec](https://docs.stackbit.com/unibit/) then 
+[Stackbit](https://www.stackbit.com) will be able to convert (transpile) it into 
+a host of target SSGs. 
 
 The following conversions are currently supported by Stackbit:
 * **Static Site Generators**: Jekyll, Hugo, Gatsby
@@ -38,4 +41,3 @@ Compile a production build into the `public` folder.
 ```
 unibit build
 ```
-

@@ -2,10 +2,11 @@
   "name": "@stackbit/unibit",
   "version": "0.1.20",
   "description": "Stackbit's static site generator powered by Nunjucks templating language",
-  "main": "dist/unibit.js",
+  "main": "src/unibit.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "version-patch": "npm version patch -m \"bumped version to v%s\""
+    "version-patch": "npm version patch -m \"bumped version to v%s\"",
+    "version-minor": "npm version minor -m \"bumped version to v%s\""
   },
   "repository": {
     "type": "git",
@@ -22,7 +23,7 @@
     "url": "https://github.com/stackbithq/unibit/issues"
   },
   "bin": {
-    "unibit": "dist/unibit.js"
+    "unibit": "unibit.js"
   },
   "dependencies": {
     "@hapi/joi": "^15.0.3",
