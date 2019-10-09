@@ -463,13 +463,11 @@ function () {
 
       var data = _fs.default.readFileSync(filePath, 'utf8');
 
-      if (!data.startsWith('---\n')) {
-        return null;
-      }
+      var _utils$parseMarkdownW = _utils.default.parseMarkdownWithFrontMatter(data),
+          frontmatter = _utils$parseMarkdownW.frontmatter,
+          markdown = _utils$parseMarkdownW.markdown;
 
-      var index = data.indexOf('\n---');
-
-      if (index === -1) {
+      if (!frontmatter) {
         return null;
       }
 
@@ -479,13 +477,6 @@ function () {
 
       var relDir = _path.default.relative(absPagesDir, pathObject.dir);
 
-      var yamlData = data.substring(4, index);
-
-      var frontmatter = _jsYaml.default.safeLoad(yamlData, {
-        schema: _jsYaml.default.JSON_SCHEMA
-      });
-
-      var markdown = data.substring(index + 5);
       var date;
 
       if (frontmatter.date) {
@@ -1389,7 +1380,7 @@ var UNIBIT = {
   pageMenuTitleKey: 'title',
   layoutsDir: 'layouts',
   componentsDir: 'components',
-  publishDir: 'output',
+  publishDir: 'public',
   buildCommand: 'unibit build',
   menuItemFields: null,
   injectLocations: {
@@ -1761,6 +1752,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.dateFormat = dateFormat;
 exports.sprintf = sprintf;
+exports.componentFile = componentFile;
 exports.sliceArray = sliceArray;
 exports.sortArray = sortArray;
 exports.split = split;
@@ -1797,6 +1789,10 @@ function dateFormat(date, format, type) {
 
 function sprintf(str, format) {
   return _sprintfJs.default.sprintf(str, format);
+}
+
+function componentFile(componentName) {
+  return componentName + '.html';
 }
 
 function sliceArray(arr, begin, end) {
@@ -2319,7 +2315,7 @@ function () {
     this.logger = _utils.default.createLogger(this.constructor.name);
     this.prettierOptions = _lodash.default.get(options, 'prettier');
     this.inputDir = _lodash.default.get(options, 'inputDir');
-    this.outputDir = _lodash.default.get(options, 'outputDir', 'output');
+    this.outputDir = _lodash.default.get(options, 'outputDir', 'public');
     this.uglyUrls = _lodash.default.get(options, 'uglyUrls');
     this.inputConfig = _lodash.default.get(options, 'config', {});
     this.withBanner = _lodash.default.get(options, 'withBanner');
@@ -2709,6 +2705,7 @@ function () {
       this.env.addFilter('relative_url', this.relativeUrl.bind(this));
       this.env.addFilter('date_format', filters.dateFormat);
       this.env.addFilter('sprintf', filters.sprintf);
+      this.env.addFilter('component_file', filters.componentFile);
       this.env.addFilter('slice_array', filters.sliceArray);
       this.env.addFilter('sort_array', filters.sortArray);
       this.env.addFilter('split', filters.split);
@@ -3016,6 +3013,7 @@ module.exports = {
   parseDataByFilePath: parseDataByFilePath,
   outputDataSync: outputDataSync,
   stringifyDataByFilePath: stringifyDataByFilePath,
+  parseMarkdownWithFrontMatter: parseMarkdownWithFrontMatter,
   deepFreeze: deepFreeze,
   failFunctionWithTag: failFunctionWithTag,
   assertFunctionWithFail: assertFunctionWithFail,
@@ -3473,6 +3471,10 @@ function parseDataByFilePath(string, filePath) {
       data = _toml.default.parse(string);
       break;
 
+    case 'md':
+      data = parseMarkdownWithFrontMatter(string);
+      break;
+
     default:
       throw new Error("parseDataByFilePath error, extension '".concat(extension, "' of file ").concat(filePath, " is not supported"));
   }
@@ -3518,6 +3520,72 @@ function stringifyDataByFilePath(data, filePath) {
   }
 
   return result;
+}
+
+function parseMarkdownWithFrontMatter(string) {
+  var frontmatter = null;
+  var markdown = string;
+  var frontMatterTypes = [{
+    type: 'yaml',
+    startDelimiter: '---\n',
+    endDelimiter: '\n---',
+    parse: function parse(string) {
+      return _jsYaml.default.safeLoad(string, {
+        schema: _jsYaml.default.JSON_SCHEMA
+      });
+    }
+  }, {
+    type: 'toml',
+    startDelimiter: '+++\n',
+    endDelimiter: '\n+++',
+    parse: function parse(string) {
+      return _toml.default.parse(string);
+    }
+  }, {
+    type: 'json',
+    startDelimiter: '{\n',
+    endDelimiter: '\n}',
+    parse: function parse(string) {
+      return JSON.parse(string);
+    }
+  }];
+
+  _lodash.default.forEach(frontMatterTypes, function (fmType) {
+    if (string.startsWith(fmType.startDelimiter)) {
+      var index = string.indexOf(fmType.endDelimiter);
+
+      if (index !== -1) {
+        // The end delimiter must be followed by EOF or by a new line (possibly preceded with spaces)
+        // For example ("." used for spaces):
+        //   |---
+        //   |title: Title
+        //   |---...
+        //   |
+        //   |Markdown Content
+        //   |
+        // "index" points to the beginning of the second "---"
+        // "endDelimEndIndex" points to the end of the second "---"
+        // "afterEndDelim" is everything after the second "---"
+        // "afterEndDelimMatch" is the matched "...\n" after the second "---"
+        // frontmatter will be: {title: "Title"}
+        // markdown will be "\nMarkdown Content\n" (the first \n after end delimiter is discarded)
+        var endDelimEndIndex = index + fmType.endDelimiter.length;
+        var afterEndDelim = string.substring(endDelimEndIndex);
+        var afterEndDelimMatch = afterEndDelim.match(/^\s*?(\n|$)/);
+
+        if (afterEndDelimMatch) {
+          var data = string.substring(fmType.startDelimiter.length, index);
+          frontmatter = fmType.parse(data);
+          markdown = afterEndDelim.substring(afterEndDelimMatch[0].length);
+        }
+      }
+    }
+  });
+
+  return {
+    frontmatter: frontmatter,
+    markdown: markdown
+  };
 }
 
 function deepFreeze(obj) {
