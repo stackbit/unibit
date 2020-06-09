@@ -21,7 +21,7 @@ function dateFormat(date, format, type) {
     type = _.defaultTo(type, 'strftime');
     let res;
     if (type === 'strftime') {
-        res = strftime(format, date);
+        res = strftime(format, _.isString(date) ? new Date(date) : date);
     } else if (type === 'moment') {
         res = moment(date).format(format);
     } else {
