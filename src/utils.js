@@ -12,7 +12,8 @@ module.exports = {
     parseFileSync,
     parseDataByFilePath,
     parseMarkdownWithFrontMatter,
-    createLogger
+    createLogger,
+    prettyUrl
 };
 
 /**
@@ -171,4 +172,16 @@ function createLogger(scope, transport) {
     });
 
     return obj;
+}
+
+function prettyUrl(url) {
+    if (url.match(/(?:^|\/)index\.html?$/)) {
+        url = url.replace(/\/?index\.html?$/, '');
+        if (url === '') {
+            url = '/';
+        }
+    } else if (url.match(/\.html?$/)) {
+        url = url.replace(/\.html?$/, '');
+    }
+    return url;
 }

@@ -10,7 +10,7 @@ const liveReload = require('./live-reload');
 const UnibitLoader = require('./unibit-loader');
 const UnibitNunjucksLoader = require('./unibit-nunjucks-loader');
 const filters = require('./filters');
-const { forEachPromise, createLogger } = require('./utils');
+const { forEachPromise, createLogger, prettyUrl } = require('./utils');
 const { UNIBIT } = require('./consts');
 
 
@@ -295,14 +295,14 @@ module.exports = class Unibit {
         });
     }
 
-    savePage(pageResult, outputUrl) {
+    savePage(pageResult, outputPath) {
         if (this.prettier) {
             pageResult = prettier.format(pageResult, _.merge({
                 parser: 'html',
                 endOfLine: 'lf'
             }, this.prettierOptions)) + '\n';
         }
-        let outputFile = path.resolve(this.outputDir, outputUrl);
+        let outputFile = path.join(path.resolve(this.outputDir), outputPath);
         fse.outputFileSync(outputFile, pageResult);
     }
 
@@ -325,46 +325,33 @@ module.exports = class Unibit {
         this.env.addFilter('replace_regexp', filters.replaceRegexp);
         this.env.addFilter('starts_with', filters.startsWith);
         this.env.addFilter('ends_with', filters.endsWith);
+        this.env.addFilter('trim', filters.trim);
+        this.env.addFilter('trim_start', filters.trimStart);
+        this.env.addFilter('trim_end', filters.trimEnd);
+        this.env.addFilter('path_join', filters.pathJoin);
         this.env.addFilter('where', filters.where);
         this.env.addFilter('link', this.link.bind(this, site));
         this.env.addExtension('LinkExtension', new LinkExtension(this, site));
     }
 
-    getPage(context, pagePath) {
-        if (!_.startsWith(pagePath, '/')) {
-            // if pagePath does not start with '/', join it to current's page
-            // relDir and test against relPath of all pages. If no such page
-            // exists, continue to regular flow.
-            let fullPath = path.join(context.page.relDir, pagePath);
-            let result = _.find(context.site.pages, page => page.relPath === fullPath);
-            if (result) {
-                return result;
-            }
-        } else {
-            // if pagePath starts with '/', remove it
-            pagePath = pagePath.substring(1);
-        }
-        return _.find(context.site.pages, page => page.relPath === pagePath) || null;
+    getPage(context, urlPath) {
+        urlPath = _.trim(urlPath, '/');
+        return _.find(context.site.pages, page => {
+            const pageUrl = _.trim(_.get(page, 'url'), '/');
+            return prettyUrl(urlPath) === prettyUrl(pageUrl);
+        });
     }
 
-    getPages(context, folderPath) {
-        if (!_.startsWith(folderPath, '/')) {
-            // if folderPath does not start with '/', join it to current's page
-            // relDir and test against relDir of all pages. If no such pages
-            // exists, continue to regular flow.
-            let fullPath = path.join(context.page.relDir, folderPath);
-            let result = _.filter(context.site.pages, page => page.relDir === fullPath);
-            if (!_.isEmpty(result)) {
-                return result;
-            }
-        }
-        folderPath = _.trim(folderPath, '/');
-        const folderPathParts = _.split(folderPath, '/');
+    getPages(context, urlPath) {
+        urlPath = _.trim(urlPath, '/');
+        urlPath = prettyUrl(urlPath);
+        const urlPathParts = _.split(urlPath, '/');
         return _.filter(context.site.pages, page => {
-            // find all pages that have same prefix as folder path, but not the root page of that folder, e.g.: {folderPath}/index.html
-            const url = _.trim(page.url, '/');
-            const urlParts = _.split(url, '/');
-            return urlParts.length > folderPathParts.length && _.isEqual(urlParts.slice(0, folderPathParts.length), folderPathParts);
+            // find all pages that have same prefix as folder path, but not the root page of that folder, e.g.: {urlPath}/index.html
+            let pageUrl = _.trim(_.get(page, 'url'), '/');
+            pageUrl = prettyUrl(pageUrl);
+            const pageUrlParts = _.split(pageUrl, '/');
+            return pageUrlParts.length > urlPathParts.length && _.isEqual(pageUrlParts.slice(0, urlPathParts.length), urlPathParts);
         });
     }
 
@@ -389,7 +376,7 @@ module.exports = class Unibit {
             if (i === 0) {
                 url = context.page.url;
             } else {
-                url = path.join(context.page.relDir, 'page' + pageNumber, 'index.html');
+                url = path.join('/', context.page.relDir, 'page' + pageNumber, 'index.html');
             }
             let startIdx = i * itemsPerPage;
             let endIdx = Math.min(startIdx + itemsPerPage, items.length);
@@ -429,14 +416,13 @@ module.exports = class Unibit {
     }
 
     relativeUrl(site, url) {
-        if (_.startsWith(url, '#') || _.startsWith(url, 'http')) {
+        if (_.startsWith(url, '#') || _.startsWith(url, 'http:') || _.startsWith(url, 'https:')) {
             return url;
         }
         let urlsRelativeToBase = _.get(site.config.data, 'urls_relative_to_base', true);
         if (!urlsRelativeToBase && !_.startsWith(url, '/')) {
             let pageDir = path.parse(this.renderingPage.outputUrl).dir;
-            this.assert(!_.startsWith(pageDir, '/'), `error in relativeUrl, page dir can not be absolute`);
-            return path.relative(pageDir, url);
+            return path.join(pageDir, url);
         } else {
             let baseUrl = _.get(site.config.data, 'baseurl', '');
             return path.join(baseUrl, '/', url);

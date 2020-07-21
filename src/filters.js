@@ -14,6 +14,10 @@ module.exports = {
     replaceRegexp,
     startsWith,
     endsWith,
+    trim,
+    trimStart,
+    trimEnd,
+    pathJoin,
     where
 };
 
@@ -64,6 +68,23 @@ function startsWith(str, prefix) {
 
 function endsWith(str, prefix) {
     return _.endsWith(str, prefix);
+}
+
+function trim(str, chars) {
+    return _.trim(str, chars);
+}
+
+function trimStart(str, chars) {
+    return _.trimStart(str, chars);
+}
+
+function trimEnd(str, chars) {
+    return _.trimEnd(str, chars);
+}
+
+function pathJoin(...pathParts) {
+    const result = _.compact(pathParts).join('/').replace(/\/{2,}/g, '/');
+    return result || '.';
 }
 
 function where(array, key, operator, match) {

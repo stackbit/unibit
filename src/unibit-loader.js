@@ -8,7 +8,8 @@ const {
     getFirstExistingFileSync,
     parseFileSync,
     readDirRecSync,
-    parseMarkdownWithFrontMatter
+    parseMarkdownWithFrontMatter,
+    prettyUrl
 } = require('./utils');
 const { STACKBIT_YAML_NAMES, UNIBIT } = require('./consts');
 
@@ -159,7 +160,7 @@ module.exports = class UnibitLoader {
         let absPagesDir = path.resolve(this.inputDir, UNIBIT.pagesDir);
         let pathObject = path.parse(filePath);
         let relDir = path.relative(absPagesDir, pathObject.dir);
-        let url = path.join(relDir, pathObject.name + '.html');
+        let url = path.join('/', relDir, pathObject.name + '.html');
         let date;
         if (frontmatter.date) {
             date = new Date(moment(frontmatter.date).toISOString());
@@ -195,15 +196,10 @@ module.exports = class UnibitLoader {
         if (uglyUrls) {
             return url;
         }
-        const pathComponents = path.parse(url);
-        if (!url.startsWith('http') && !url.startsWith('//')) {
-            if (pathComponents.base.match(/^index\.html?$/)) {
-                url = url.replace(/index\.html?$/, '');
-            } else if (pathComponents.ext.match(/\.html?$/)) {
-                url = _.compact([pathComponents.dir, pathComponents.name]).join(path.sep) + path.sep;
-            }
+        if (url.startsWith('http:') || url.startsWith('https:') || url.startsWith('//')) {
+            return url;
         }
-        return url;
+        return prettyUrl(url);
     }
 
     createMenuItems({config, pages, uglyUrls}) {
