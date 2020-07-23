@@ -29,7 +29,7 @@ module.exports = class Unibit {
 
         this.logger.log(`Generating site into ${path.resolve(this.outputDir)}`);
         _.forEach(options, (value, key) => {
-            this.logger.log(`  ${key}: ${value}`);
+            this.logger.log(`  ${key}: ${JSON.stringify(value)}`);
         });
 
         this.watcher = null;
@@ -201,7 +201,7 @@ module.exports = class Unibit {
             return this.renderAndSavePage(context, page.url).then(() => {
                 let pageRenderQueue = _.remove(this.pageRenderQueue);
                 return forEachPromise(pageRenderQueue, renderItem => {
-                    return this.renderAndSavePage(renderItem.context, renderItem.outputUrl);
+                    return this.renderAndSavePage(renderItem.context, renderItem.pageUrl);
                 });
             });
         });
@@ -260,23 +260,24 @@ module.exports = class Unibit {
         });
     }
 
-    addPageToRenderQueue(context, outputUrl) {
+    addPageToRenderQueue(context, pageUrl) {
         this.pageRenderQueue.push({
             context: context,
-            outputUrl: outputUrl
+            pageUrl: pageUrl
         });
     }
 
-    renderAndSavePage(context, url) {
+    renderAndSavePage(context, pageUrl) {
         this.assert(this.renderingPage === null, `Trying to generate two pages in parallel`);
-        const outputUrl = url.match(/\w+\.\w+$/) ? url : path.join(url, 'index.html');
+        let outputPath = pageUrl.match(/\w+\.\w+$/) ? pageUrl : path.join(pageUrl, 'index.html');
+        outputPath = outputPath.replace(/^\//, '');
         this.renderingPage = {
             context: context,
-            outputUrl: outputUrl
+            outputPath: outputPath
         };
         return this.renderPage(context).then(res => {
             this.renderingPage = null;
-            this.savePage(res, outputUrl);
+            this.savePage(res, outputPath);
         });
     }
 
@@ -407,10 +408,10 @@ module.exports = class Unibit {
             });
         });
         _.tail(pages).forEach(page => {
-            let outputUrl = page.url;
+            let pageUrl = page.url;
             // override the original paginate function to return current pagination page
             let pageContext = Object.assign({}, context, {paginate: () => page});
-            this.addPageToRenderQueue(pageContext, outputUrl);
+            this.addPageToRenderQueue(pageContext, pageUrl);
         });
         return pages[0];
     }
@@ -421,8 +422,8 @@ module.exports = class Unibit {
         }
         let urlsRelativeToBase = _.get(site.config.data, 'urls_relative_to_base', true);
         if (!urlsRelativeToBase && !_.startsWith(url, '/')) {
-            let pageDir = path.parse(this.renderingPage.outputUrl).dir;
-            return path.join(pageDir, url);
+            let pageDir = path.parse(this.renderingPage.outputPath).dir;
+            return path.relative(pageDir, url);
         } else {
             let baseUrl = _.get(site.config.data, 'baseurl', '');
             return path.join(baseUrl, '/', url);
