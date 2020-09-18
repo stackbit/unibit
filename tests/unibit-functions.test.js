@@ -32,8 +32,11 @@ describe('getData', ()=>{
         expect(data).toBe(pageContext.site.data.links.ssg);
     });
 
-    it('returns undefined if not found', () => {
+    it('returns null if not found', () => {
         let data = unibit.getData(pageContext, 'data/links/fake');
+        expect(data).toBeNull();
+
+        data = unibit.getData(pageContext, 'data/fake');
         expect(data).toBeNull();
     });
 })
