@@ -240,6 +240,7 @@ module.exports = class Unibit {
         context.getPage = this.getPage.bind(this, context);
         context.getPages = this.getPages.bind(this, context);
         context.getData = this.getData.bind(this, context);
+        context.getPageByReference = this.getPageByReference.bind(this, context);
         context.paginate = this.paginate.bind(this, context);
         context.link = this.link.bind(this, context.site);
         context.classNames = this.classNames.bind(this);
@@ -365,6 +366,15 @@ module.exports = class Unibit {
             path.shift();
         }
         return _.get(context.site.data, path, null);
+    }
+
+    getPageByReference(context, reference) {
+        // remove extension
+        reference = reference.replace(/\.md$/, '');
+        return _.find(context.site.pages, page => {
+            const pageUrl = _.trim(_.get(page, 'url'), '/');
+            return reference === pageUrl;
+        });
     }
 
     paginate(context, items, itemsPerPage) {

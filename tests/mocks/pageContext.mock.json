@@ -1,0 +1,409 @@
+{
+  "site": {
+    "title": "Universal",
+    "baseurl": "/",
+    "pages": [
+      {
+        "title": "About",
+        "layout": "basic",
+        "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/about.md",
+        "relPath": "about.md",
+        "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content",
+        "relDir": "",
+        "url": "about/",
+        "basename": "about.md",
+        "filename": "about",
+        "date": "2020-05-21T09:09:36.000Z",
+        "params": {
+          "title": "About",
+          "layout": "basic",
+          "template": "basic"
+        },
+        "frontmatter": {
+          "title": "About",
+          "layout": "basic",
+          "template": "basic"
+        },
+        "markdown": "\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Integer sed commodo urna, quis consequat sapien. Aenean est augue, iaculis in mattis vitae, faucibus sit amet justo. Donec placerat suscipit nunc vel ornare. Etiam semper dolor pharetra augue consequat, at tincidunt dui mollis. Donec pharetra et nulla sit amet tincidunt. Maecenas tincidunt id purus sed interdum. Etiam ultrices et enim vel laoreet. Vestibulum gravida sed libero et condimentum. Quisque venenatis, felis ac pretium vehicula, augue nulla pharetra nisi, sed faucibus eros neque sed felis. Vestibulum vitae vehicula sapien. Phasellus ipsum ante, efficitur eget orci sit amet, luctus suscipit sapien. Maecenas et dapibus sem, eu molestie velit. Vivamus in finibus justo.\n\nCurabitur eu massa quis nisl tincidunt tincidunt. Duis odio nisl, lacinia vel sollicitudin in, eleifend eu nulla. Duis eu ex dapibus, tempor lorem vitae, rutrum augue. Cras feugiat, arcu eu faucibus rutrum, lacus purus vehicula felis, id ornare dolor eros at sapien. Sed sit amet lobortis nisi. Suspendisse potenti. Cras malesuada felis ut venenatis aliquet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut vitae posuere elit. Morbi auctor porta mi quis lobortis. Maecenas tristique nibh sit amet tellus cursus, eu fermentum arcu aliquam. Proin rhoncus, mauris a molestie dignissim, ex ipsum pellentesque neque, sed imperdiet sem nisi at nisl. Mauris vel felis et est tempus ullamcorper. Aliquam erat volutpat.\n\n",
+        "content": {
+          "val": "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer sed commodo urna, quis consequat sapien. Aenean est augue, iaculis in mattis vitae, faucibus sit amet justo. Donec placerat suscipit nunc vel ornare. Etiam semper dolor pharetra augue consequat, at tincidunt dui mollis. Donec pharetra et nulla sit amet tincidunt. Maecenas tincidunt id purus sed interdum. Etiam ultrices et enim vel laoreet. Vestibulum gravida sed libero et condimentum. Quisque venenatis, felis ac pretium vehicula, augue nulla pharetra nisi, sed faucibus eros neque sed felis. Vestibulum vitae vehicula sapien. Phasellus ipsum ante, efficitur eget orci sit amet, luctus suscipit sapien. Maecenas et dapibus sem, eu molestie velit. Vivamus in finibus justo.</p>\n<p>Curabitur eu massa quis nisl tincidunt tincidunt. Duis odio nisl, lacinia vel sollicitudin in, eleifend eu nulla. Duis eu ex dapibus, tempor lorem vitae, rutrum augue. Cras feugiat, arcu eu faucibus rutrum, lacus purus vehicula felis, id ornare dolor eros at sapien. Sed sit amet lobortis nisi. Suspendisse potenti. Cras malesuada felis ut venenatis aliquet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut vitae posuere elit. Morbi auctor porta mi quis lobortis. Maecenas tristique nibh sit amet tellus cursus, eu fermentum arcu aliquam. Proin rhoncus, mauris a molestie dignissim, ex ipsum pellentesque neque, sed imperdiet sem nisi at nisl. Mauris vel felis et est tempus ullamcorper. Aliquam erat volutpat.</p>\n",
+          "length": 1478
+        },
+        "template": "basic"
+      },
+      {
+        "title": "Build With Unibit",
+        "layout": "feature",
+        "description": "Unibit is a static site generator that uses the Nunjucks templating system.",
+        "image_thumbnail": "images/1.jpg",
+        "button_link": "unibit",
+        "button_text": "Unibit Documentation",
+        "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features/feature1.md",
+        "relPath": "features/feature1.md",
+        "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features",
+        "relDir": "features",
+        "url": "features/feature1/",
+        "basename": "feature1.md",
+        "filename": "feature1",
+        "date": "2020-05-21T09:09:36.000Z",
+        "params": {
+          "title": "Build With Unibit",
+          "layout": "feature",
+          "description": "Unibit is a static site generator that uses the Nunjucks templating system.",
+          "image_thumbnail": "images/1.jpg",
+          "button_link": "unibit",
+          "button_text": "Unibit Documentation",
+          "template": "feature"
+        },
+        "frontmatter": {
+          "title": "Build With Unibit",
+          "layout": "feature",
+          "description": "Unibit is a static site generator that uses the Nunjucks templating system.",
+          "image_thumbnail": "images/1.jpg",
+          "button_link": "unibit",
+          "button_text": "Unibit Documentation",
+          "template": "feature"
+        },
+        "markdown": "\nUnibit is a static site generator that uses the Nunjucks templating system.\n\n",
+        "content": {
+          "val": "<p>Unibit is a static site generator that uses the Nunjucks templating system.</p>\n",
+          "length": 83
+        },
+        "template": "feature"
+      },
+      {
+        "title": "Convert Into Other SSGs",
+        "layout": "feature",
+        "description": "Unibit is a superset of existing static site generators and can be converted into other SSG's",
+        "image_thumbnail": "images/2.jpg",
+        "button_link": "unibit/conversion",
+        "button_text": "Conversion Documentation",
+        "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features/feature2.md",
+        "relPath": "features/feature2.md",
+        "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features",
+        "relDir": "features",
+        "url": "features/feature2/",
+        "basename": "feature2.md",
+        "filename": "feature2",
+        "date": "2020-05-21T09:09:36.000Z",
+        "params": {
+          "title": "Convert Into Other SSGs",
+          "layout": "feature",
+          "description": "Unibit is a superset of existing static site generators and can be converted into other SSG's",
+          "image_thumbnail": "images/2.jpg",
+          "button_link": "unibit/conversion",
+          "button_text": "Conversion Documentation",
+          "template": "feature"
+        },
+        "frontmatter": {
+          "title": "Convert Into Other SSGs",
+          "layout": "feature",
+          "description": "Unibit is a superset of existing static site generators and can be converted into other SSG's",
+          "image_thumbnail": "images/2.jpg",
+          "button_link": "unibit/conversion",
+          "button_text": "Conversion Documentation",
+          "template": "feature"
+        },
+        "markdown": "\nUnibit is a superset of existing static site generators, if you build a theme according to the Unibit spec then Stackbit will be able to convert (transpile) that theme into other static site generators like Hugo, Jekyll and Gatsby.",
+        "content": {
+          "val": "<p>Unibit is a superset of existing static site generators, if you build a theme according to the Unibit spec then Stackbit will be able to convert (transpile) that theme into other static site generators like Hugo, Jekyll and Gatsby.</p>\n",
+          "length": 239
+        },
+        "template": "feature"
+      },
+      {
+        "title": "Connect any Headless CMS",
+        "layout": "feature",
+        "image_thumbnail": "images/6.jpg",
+        "description": "Map content and front matter to work with any Headless CMS.",
+        "button_link": "uniform",
+        "button_text": "Uniform Documentation",
+        "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features/feature3.md",
+        "relPath": "features/feature3.md",
+        "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features",
+        "relDir": "features",
+        "url": "features/feature3/",
+        "basename": "feature3.md",
+        "filename": "feature3",
+        "date": "2020-05-21T09:09:36.000Z",
+        "params": {
+          "title": "Connect any Headless CMS",
+          "layout": "feature",
+          "image_thumbnail": "images/6.jpg",
+          "description": "Map content and front matter to work with any Headless CMS.",
+          "button_link": "uniform",
+          "button_text": "Uniform Documentation",
+          "template": "feature"
+        },
+        "frontmatter": {
+          "title": "Connect any Headless CMS",
+          "layout": "feature",
+          "image_thumbnail": "images/6.jpg",
+          "description": "Map content and front matter to work with any Headless CMS.",
+          "button_link": "uniform",
+          "button_text": "Uniform Documentation",
+          "template": "feature"
+        },
+        "markdown": "\nLearn how to define Content Models and connect your site to any headless CMS.\n",
+        "content": {
+          "val": "<p>Learn how to define Content Models and connect your site to any headless CMS.</p>\n",
+          "length": 85
+        },
+        "template": "feature"
+      },
+      {
+        "title": "Features",
+        "layout": "features",
+        "menus": {
+          "main": {
+            "identifier": "features",
+            "weight": 2
+          }
+        },
+        "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features.md",
+        "relPath": "features.md",
+        "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content",
+        "relDir": "",
+        "url": "features/",
+        "basename": "features.md",
+        "filename": "features",
+        "date": "2020-05-21T09:09:36.000Z",
+        "params": {
+          "title": "Features",
+          "layout": "features",
+          "menus": {
+            "main": {
+              "identifier": "features",
+              "weight": 2
+            }
+          },
+          "template": "features"
+        },
+        "frontmatter": {
+          "title": "Features",
+          "layout": "features",
+          "menus": {
+            "main": {
+              "identifier": "features",
+              "weight": 2
+            }
+          },
+          "template": "features"
+        },
+        "markdown": "",
+        "content": {
+          "val": "",
+          "length": 0
+        },
+        "template": "features"
+      },
+      {
+        "title": "Home",
+        "layout": "home",
+        "heading": "A Unibit Starter Theme",
+        "show_button": true,
+        "homepage_button_link": "unibit",
+        "homepage_button_text": "Unibit Documentation",
+        "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/index.md",
+        "relPath": "index.md",
+        "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content",
+        "relDir": "",
+        "url": "",
+        "basename": "index.md",
+        "filename": "index",
+        "date": "2020-05-21T09:09:36.000Z",
+        "params": {
+          "title": "Home",
+          "layout": "home",
+          "heading": "A Unibit Starter Theme",
+          "show_button": true,
+          "homepage_button_link": "unibit",
+          "homepage_button_text": "Unibit Documentation",
+          "template": "home"
+        },
+        "frontmatter": {
+          "title": "Home",
+          "layout": "home",
+          "heading": "A Unibit Starter Theme",
+          "show_button": true,
+          "homepage_button_link": "unibit",
+          "homepage_button_text": "Unibit Documentation",
+          "template": "home"
+        },
+        "markdown": "\nUnibit is a superset of existing static site generators. It can be used as a standalone ssg or it can be imported into [Stackbit](https://www.stackbit.com) and seamlessly converted into other static site generators and headless CMS. \n\n\n",
+        "content": {
+          "val": "<p>Unibit is a superset of existing static site generators. It can be used as a standalone ssg or it can be imported into <a href=\"https://www.stackbit.com\">Stackbit</a> and seamlessly converted into other static site generators and headless CMS. </p>\n",
+          "length": 252
+        },
+        "template": "home"
+      }
+    ],
+    "data": {
+      "links": {
+        "ssg": [
+          {
+            "title": "Jekyll",
+            "url": "https://jekyllrb.com"
+          },
+          {
+            "title": "Hugo",
+            "url": "https://gohugo.io"
+          },
+          {
+            "title": "Gatsby",
+            "url": "https://www.gatsbyjs.org"
+          }
+        ],
+        "cms": [
+          {
+            "title": "Forestry",
+            "url": "https://forestry.io"
+          },
+          {
+            "title": "Netlify CMS",
+            "url": "https://www.netlifycms.org"
+          },
+          {
+            "title": "DatoCMS",
+            "url": "https://www.datocms.com"
+          },
+          {
+            "title": "Contentful",
+            "url": "https://www.contentful.com"
+          }
+        ]
+      }
+    },
+    "menus": {
+      "main": [
+        {
+          "menu": "main",
+          "title": "Home",
+          "url": "/",
+          "identifier": "home",
+          "weight": 1,
+          "children": []
+        },
+        {
+          "menu": "main",
+          "title": "Features",
+          "url": "features/",
+          "weight": 2,
+          "identifier": "features",
+          "page": {
+            "title": "Features",
+            "layout": "features",
+            "menus": {
+              "main": {
+                "identifier": "features",
+                "weight": 2
+              }
+            },
+            "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features.md",
+            "relPath": "features.md",
+            "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content",
+            "relDir": "",
+            "url": "features.html",
+            "basename": "features.md",
+            "filename": "features",
+            "date": "2020-05-21T09:09:36.000Z",
+            "params": {
+              "title": "Features",
+              "layout": "features",
+              "menus": {
+                "main": {
+                  "identifier": "features",
+                  "weight": 2
+                }
+              }
+            },
+            "frontmatter": {
+              "title": "Features",
+              "layout": "features",
+              "menus": {
+                "main": {
+                  "identifier": "features",
+                  "weight": 2
+                }
+              }
+            },
+            "markdown": ""
+          },
+          "children": []
+        }
+      ],
+      "secondary": [
+        {
+          "menu": "secondary",
+          "title": "About",
+          "url": "about",
+          "identifier": "about",
+          "weight": 1,
+          "children": []
+        }
+      ]
+    },
+    "params": {
+      "logo": "images/logo.svg",
+      "docs_url": "https://docs.stackbit.com"
+    }
+  },
+  "templates": {
+    "title": null,
+    "body_class": null
+  },
+  "stackbit_banner": {
+    "component": "stackbit-banner.html",
+    "name": "Universal",
+    "create_url": "https://app.stackbit.com/create?theme=universal",
+    "github_url": "https://github.com/stackbithq/stackbit-theme-universal",
+    "show_banner": false
+  },
+  "liveReload": true,
+  "page": {
+    "title": "Features",
+    "layout": "features",
+    "menus": {
+      "main": {
+        "identifier": "features",
+        "weight": 2
+      }
+    },
+    "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features.md",
+    "relPath": "features.md",
+    "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content",
+    "relDir": "",
+    "url": "features/",
+    "basename": "features.md",
+    "filename": "features",
+    "date": "2020-05-21T09:09:36.000Z",
+    "params": {
+      "title": "Features",
+      "layout": "features",
+      "menus": {
+        "main": {
+          "identifier": "features",
+          "weight": 2
+        }
+      },
+      "template": "features"
+    },
+    "frontmatter": {
+      "title": "Features",
+      "layout": "features",
+      "menus": {
+        "main": {
+          "identifier": "features",
+          "weight": 2
+        }
+      },
+      "template": "features"
+    },
+    "markdown": "",
+    "content": {
+      "val": "",
+      "length": 0
+    },
+    "template": "features"
+  }
+}
