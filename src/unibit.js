@@ -240,7 +240,7 @@ module.exports = class Unibit {
         context.getPage = this.getPage.bind(this, context);
         context.getPages = this.getPages.bind(this, context);
         context.getData = this.getData.bind(this, context);
-        context.getPageByReference = this.getPageByReference.bind(this, context);
+        context.getPageByFilePath = this.getPageByFilePath.bind(this, context);
         context.paginate = this.paginate.bind(this, context);
         context.link = this.link.bind(this, context.site);
         context.classNames = this.classNames.bind(this);
@@ -368,12 +368,12 @@ module.exports = class Unibit {
         return _.get(context.site.data, path, null);
     }
 
-    getPageByReference(context, reference) {
+    getPageByFilePath(context, filePath) {
         // remove extension
-        reference = reference.replace(/\.md$/, '');
+        const urlPath = _.trim(filePath, '.md');
         return _.find(context.site.pages, page => {
-            const pageUrl = _.trim(_.get(page, 'url'), '/');
-            return reference === pageUrl;
+            const pageUrl = _.trim(_.get(page, 'relPath'), '.md');
+            return urlPath === pageUrl;
         });
     }
 
