@@ -6,8 +6,8 @@ according to the [Unibit spec](https://docs.stackbit.com/unibit/) then
 a host of target SSGs. 
 
 The following conversions are currently supported by Stackbit:
-* **Static Site Generators**: Jekyll, Hugo, Gatsby
-* **Headless CMS**: Forestry, Netlify CMS, DatoCMS, Contentful
+* **Static Site Generators**: Jekyll, Hugo, Gatsby, Next.js
+* **Headless CMS**: Forestry, Netlify CMS, DatoCMS, Contentful, Sanity
 
 ## Documentation
 
