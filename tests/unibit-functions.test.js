@@ -2,31 +2,16 @@ const Unibit = require('../src/unibit');
 const unibit = new Unibit();
 
 const aboutPage = {
-    "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/about.md",
     "relPath": "about.md",
-    "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content",
-    "relDir": "",
     "url": "about/",
-    "basename": "about.md",
-    "filename": "about"
 }
 const feature1Page = {
-    "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features/feature1.md",
     "relPath": "features/feature1.md",
-    "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features",
-    "relDir": "features",
     "url": "features/feature1/",
-    "basename": "feature1.md",
-    "filename": "feature1"
 };
 const feature2Page = {
-    "absPath": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features/feature2.md",
     "relPath": "features/feature2.md",
-    "absDir": "/Users/rodik/Work/Stackbit/project-repos/unibit/sample/unibit-universal/content/features",
-    "relDir": "features",
     "url": "features/feature2/",
-    "basename": "feature2.md",
-    "filename": "feature2"
 };
 
 const linksSSGData = [
@@ -62,6 +47,16 @@ describe('getPage', ()=>{
     it('gets a page by url', () => {
         let page = unibit.getPage(pageContext, 'about');
         expect(page).toBe(aboutPage);
+
+        page = unibit.getPage(pageContext, '/about');
+        expect(page).toBe(aboutPage);
+
+        page = unibit.getPage(pageContext, '/about/');
+        expect(page).toBe(aboutPage);
+
+        page = unibit.getPage(pageContext, 'about/');
+        expect(page).toBe(aboutPage);
+
     });
     it('should not work with file paths', () => {
         let page = unibit.getPage(pageContext, 'about.md');
@@ -101,8 +96,8 @@ describe('getPageByFilePath', ()=>{
         expect(data).toBe(feature1Page);
     });
 
-    it('gets a page by url', () => {
+    it('should not work with urls', () => {
         let data = unibit.getPageByFilePath(pageContext, 'features/feature1');
-        expect(data).toBe(feature1Page);
+        expect(data).toBeUndefined();
     });
 })

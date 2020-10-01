@@ -370,10 +370,9 @@ module.exports = class Unibit {
 
     getPageByFilePath(context, filePath) {
         // remove extension
-        const urlPath = _.trim(filePath, '.md');
         return _.find(context.site.pages, page => {
-            const pageUrl = _.trim(_.get(page, 'relPath'), '.md');
-            return urlPath === pageUrl;
+            const pageUrl = _.get(page, 'relPath');
+            return filePath === pageUrl;
         });
     }
 
