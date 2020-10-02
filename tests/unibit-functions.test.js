@@ -92,12 +92,12 @@ describe('getData', ()=>{
 
 describe('getPageByFilePath', ()=>{
     it('gets a page by path', () => {
-        let data = unibit.getPageByFilePath(pageContext, 'features/feature1.md');
+        let data = unibit.getPageByFilePath(pageContext, 'content/features/feature1.md');
         expect(data).toBe(feature1Page);
     });
 
     it('should not work with urls', () => {
-        let data = unibit.getPageByFilePath(pageContext, 'features/feature1');
+        let data = unibit.getPageByFilePath(pageContext, 'content/features/feature1');
         expect(data).toBeUndefined();
     });
 })
