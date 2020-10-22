@@ -55,7 +55,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
 <script>
   var body = document.querySelector("body");
   var themebar = document.querySelector("#theme-bar");
-  var hideThemeBar = sessionStorage.getItem('hideThemeBar');
+  var hideThemeBar = sessionStorage.getItem('hideThemeBar') || window.location.search.indexOf('hideThemeBar') >= 0;
   if (body && !hideThemeBar) {
     body.classList.add("has-theme-bar");
     themebar.classList.remove("theme-bar-hidden");
