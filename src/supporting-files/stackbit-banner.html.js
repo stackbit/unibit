@@ -7,7 +7,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
   <div class="theme-bar-center">
     {% if stackbit_banner.github_url %}
     <a
-      class="theme-bar-button theme-bar-button-outlined"
+      class="theme-bar-button theme-bar-button-outlined theme-bar-fork"
       href="{% if stackbit_banner.github_url %}{{ stackbit_banner.github_url }}{% endif %}"
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
@@ -21,7 +21,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
     {% endif %}
     {% if stackbit_banner.create_url %}
     <a
-      class="theme-bar-button theme-bar-button-primary"
+      class="theme-bar-button theme-bar-button-primary theme-bar-new-site"
       href="{{ stackbit_banner.create_url }}"
     >
       <svg fill="currentColor" viewBox="0 0 131 107">
@@ -55,7 +55,34 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
 <script>
   var body = document.querySelector("body");
   var themebar = document.querySelector("#theme-bar");
-  var hideThemeBar = sessionStorage.getItem('hideThemeBar') || window.location.search.indexOf('hideThemeBar') >= 0;
+  var searchParams = window.location.search
+    .slice(1)
+    .split('&')
+    .reduce((res, cur) => {
+      const [key, value] = cur.split('=');
+      res[key] = value || true;
+      return res;
+    }, {});
+  var hideThemeBar = sessionStorage.getItem('hideThemeBar') || searchParams.themeBarHidden;
+  if (searchParams.themeBarTitle) {
+    themebar.querySelector('.theme-bar-name').textContent = decodeURIComponent(searchParams.themeBarTitle);
+  }
+  if (searchParams.themeBarFork) {
+    var forkButton = themebar.querySelector('.theme-bar-fork');
+    if (searchParams.themeBarFork === 'false') {
+      forkButton.style.display = 'none';
+    } else {
+      forkButton.querySelector('span').textContent = decodeURIComponent(searchParams.themeBarFork);
+    }
+  }
+  if (searchParams.themeBarNewSite) {
+    var newSiteButton = themebar.querySelector('.theme-bar-new-site');
+    if (searchParams.themeBarNewSite === 'false') {
+      newSiteButton.style.display = 'none';
+    } else {
+      newSiteButton.querySelector('span').textContent = decodeURIComponent(searchParams.themeBarNewSite);
+    }
+  }
   if (body && !hideThemeBar) {
     body.classList.add("has-theme-bar");
     themebar.classList.remove("theme-bar-hidden");
