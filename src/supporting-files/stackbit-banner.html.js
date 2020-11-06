@@ -83,6 +83,11 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
       newSiteButton.querySelector('span').textContent = decodeURIComponent(searchParams.themeBarNewSite);
     }
   }
+  if (searchParams.themeBarUserGroup) {
+    var newSiteButton = themebar.querySelector('.theme-bar-new-site');
+    var joiner = newSiteButton.search.length ? '&' : '';
+    newSiteButton.search += joiner + 'userGroup=' + searchParams.themeBarUserGroup;
+  }
   if (body && !hideThemeBar) {
     body.classList.add("has-theme-bar");
     themebar.classList.remove("theme-bar-hidden");
