@@ -76,6 +76,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
     themeBarProperties = {
       themeBarTitle: searchParams.get("themeBarTitle"),
       themeBarFork: searchParams.get("themeBarFork"),
+      themeBarForkLink: searchParams.get("themeBarForkLink"),
       themeBarNewSite: searchParams.get("themeBarNewSite"),
       themeBarNewSiteLink: searchParams.get("themeBarNewSiteLink"),
       themeBarNewSiteTheme: searchParams.get("themeBarNewSiteTheme"),
