@@ -53,104 +53,102 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
 </div>
 
 <script>
-  const body = document.querySelector("body");
-  const themebar = document.querySelector("#theme-bar");
-  const searchParams = new URLSearchParams(window.location.search);
-
-  // Hide themebar from localstorage
-  const hideThemeBar = sessionStorage.getItem("hideThemeBar") || searchParams.get("themeBarHidden");
-  if (body && !hideThemeBar) {
-    body.classList.add("has-theme-bar");
-    themebar.classList.remove("theme-bar-hidden");
-  }
-
-  const demo = searchParams.get("demo")
-  let themeBarProperties = {}
-
-  // themeBarConfig is loaded from themeBarConfig.js in the <head> of this document. The file is generated seperately in \`stackbit-themes\` repo at build time.
-  if (demo && themeBarConfig) {
-    if (themeBarConfig[demo]) {
-      themeBarProperties = themeBarConfig[demo]
-    }
-  } else {
-    themeBarProperties = {
-      themeBarTitle: searchParams.get("themeBarTitle"),
-      themeBarFork: searchParams.get("themeBarFork"),
-      themeBarForkLink: searchParams.get("themeBarForkLink"),
-      themeBarNewSite: searchParams.get("themeBarNewSite"),
-      themeBarNewSiteLink: searchParams.get("themeBarNewSiteLink"),
-      themeBarNewSiteTheme: searchParams.get("themeBarNewSiteTheme"),
-      themeBarUserGroup: searchParams.get("themeBarUserGroup")
-    };
-  }
-
-  updateThemeBar = props => {
-    const uiThemeBarTitle = themebar.querySelector(".theme-bar-name");
-    const uiThemeBarForkLink = themebar.querySelector(".theme-bar-fork-link");
-    const uiThemeBarForkName = themebar.querySelector(".theme-bar-fork-name");
-    const uiThemeBarNewSiteLink = themebar.querySelector(".theme-bar-new-site-link");
-    const uiThemeBarNewSiteName = themebar.querySelector(".theme-bar-new-site-name");
-
-    // Update Title in top left
-    if (props.themeBarTitle) {
-      uiThemeBarTitle.textContent = props.themeBarTitle;
-    }
-
-    // Update fork button title or visibility
-    if (props.themeBarFork) {
-      if (props.themeBarFork === "false") {
-        uiThemeBarForkLink.style.display = "none";
-      } else {
-        uiThemeBarForkName.textContent = props.themeBarFork;
-      }
-    }
-
-    // Update create site button title or visibility
-    if (props.themeBarNewSite) {
-      if (props.themeBarNewSite === "false") {
-        uiThemeBarNewSiteLink.style.display = "none";
-      } else {
-        uiThemeBarNewSiteName.textContent = props.themeBarNewSite;
-      }
-    }
-
-    // Update button links and pass through extra query params
-    let newForkLink = new URL(uiThemeBarForkLink.href)
-    let newSiteLink = new URL(uiThemeBarNewSiteLink.href);
-
-    if (props.themeBarNewSiteLink) {
-      newSiteLink = new URL(props.themeBarNewSiteLink);
-    }
-
-    if (props.themeBarForkLink) {
-      newForkLink = new URL(props.themeBarForkLink);
-    }
-
-    if (props.themeBarUserGroup) {
-      newSiteLink.searchParams.set('userGroup', props.themeBarUserGroup)
-    }
-
-    if (props.themeBarNewSiteTheme) {
-      newSiteLink.searchParams.set('theme', props.themeBarNewSiteTheme)
+    const body = document.querySelector("body");
+    const themebar = document.querySelector("#theme-bar");
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Hide themebar from localstorage
+    const hideThemeBar = sessionStorage.getItem("hideThemeBar") || searchParams.get("themeBarHidden");
+    if (body && !hideThemeBar) {
+        body.classList.add("has-theme-bar");
+        themebar.classList.remove("theme-bar-hidden");
     }
     
-    if (props.themeBarNewSiteParams) {
-      for (const [key, value] of Object.entries(props.themeBarNewSiteParams)) {
-        newSiteLink.searchParams.set(key, value);
-      }
+    let themeBarProperties = {
+        themeBarNewSiteLinkParams: {}
+    };
+    
+    const demo = searchParams.get("demo");
+    if (demo && themeBarConfig) {
+        if (themeBarConfig[demo]) {
+          themeBarProperties = themeBarConfig[demo];
+        }
+    } else if (sessionStorage.getItem("themeBarProperties")) {
+        themeBarProperties = JSON.parse(sessionStorage.getItem("themeBarProperties"));
     }
-
-    uiThemeBarNewSiteLink.setAttribute("href", newSiteLink.toString());
-    uiThemeBarForkLink.setAttribute("href", newForkLink.toString());
-  };
-
-  updateThemeBar(themeBarProperties)
-
-  document.querySelector("#remove-theme-bar").addEventListener("click", function(e) {
-    e.preventDefault();
-    body.classList.remove("has-theme-bar");
-    themebar.classList.add("theme-bar-hidden");
-    sessionStorage.setItem("hideThemeBar", true);
-  });
+    
+    // Url params overwrite config values
+    if (searchParams.get("themeBarTitle")) { themeBarProperties.themeBarTitle = searchParams.get("themeBarTitle") }
+    if (searchParams.get("themeBarFork")) { themeBarProperties.themeBarFork = searchParams.get("themeBarFork") }
+    if (searchParams.get("themeBarForkLink")) { themeBarProperties.themeBarForkLink = searchParams.get("themeBarForkLink") }
+    if (searchParams.get("themeBarNewSite")) { themeBarProperties.themeBarNewSite = searchParams.get("themeBarNewSite") }
+    if (searchParams.get("themeBarNewSiteLink")) { themeBarProperties.themeBarNewSiteLink = searchParams.get("themeBarNewSiteLink") }
+    if (searchParams.get("themeBarNewSiteLinkParams")) {
+        // themeBarNewSiteLinkParams url params are merged with config values
+        const params = JSON.parse(searchParams.get("themeBarNewSiteLinkParams"))
+        for (const [key, value] of Object.entries(params)) {
+            themeBarProperties.themeBarNewSiteLinkParams[key] = value;
+        }
+    }
+    
+    updateThemeBar = props => {
+        const uiThemeBarTitle = themebar.querySelector(".theme-bar-name");
+        const uiThemeBarForkLink = themebar.querySelector(".theme-bar-fork-link");
+        const uiThemeBarForkName = themebar.querySelector(".theme-bar-fork-name");
+        const uiThemeBarNewSiteLink = themebar.querySelector(".theme-bar-new-site-link");
+        const uiThemeBarNewSiteName = themebar.querySelector(".theme-bar-new-site-name");
+        
+        // Update Title in top left
+        if (props.themeBarTitle) {
+            uiThemeBarTitle.textContent = props.themeBarTitle;
+        }
+        
+        // Update fork button title or visibility
+        if (props.themeBarFork) {
+            if (props.themeBarFork === "false") {
+                uiThemeBarForkLink.style.display = "none";
+            } else {
+                uiThemeBarForkName.textContent = props.themeBarFork;
+            }
+        }
+        
+        // Update create site button title or visibility
+        if (props.themeBarNewSite) {
+            if (props.themeBarNewSite === "false") {
+                uiThemeBarNewSiteLink.style.display = "none";
+            } else {
+                uiThemeBarNewSiteName.textContent = props.themeBarNewSite;
+            }
+        }
+        
+        // Update button links and pass through extra query params
+        let newForkLink = new URL(uiThemeBarForkLink.href);
+        let newSiteLink = new URL(uiThemeBarNewSiteLink.href);
+        
+        if (props.themeBarNewSiteLink) {
+            newSiteLink = new URL(props.themeBarNewSiteLink);
+        }
+        if (props.themeBarForkLink) {
+            newForkLink = new URL(props.themeBarForkLink);
+        }
+        if (props.themeBarNewSiteLinkParams) {
+            for (const [key, value] of Object.entries( props.themeBarNewSiteLinkParams)) {
+                newSiteLink.searchParams.set(key, value);
+            }
+        }
+        
+        uiThemeBarNewSiteLink.setAttribute("href", newSiteLink.toString());
+        uiThemeBarForkLink.setAttribute("href", newForkLink.toString());
+    };
+    
+    updateThemeBar(themeBarProperties);
+    sessionStorage.setItem("themeBarProperties", JSON.stringify(themeBarProperties));
+    
+    document.querySelector("#remove-theme-bar").addEventListener("click", function(e) {
+        e.preventDefault();
+        body.classList.remove("has-theme-bar");
+        themebar.classList.add("theme-bar-hidden");
+        sessionStorage.setItem("hideThemeBar", true);
+    });
 </script>
 `;
