@@ -64,9 +64,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
         themebar.classList.remove("theme-bar-hidden");
     }
     
-    let themeBarProperties = {
-        themeBarNewSiteLinkParams: {}
-    };
+    let themeBarProperties = {};
     
     const demo = searchParams.get("demo");
     if (demo && themeBarConfig) {
@@ -85,6 +83,9 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
     if (searchParams.get("themeBarNewSiteLink")) { themeBarProperties.themeBarNewSiteLink = searchParams.get("themeBarNewSiteLink") }
     if (searchParams.get("themeBarNewSiteLinkParams")) {
         // themeBarNewSiteLinkParams url params are merged with config values
+        if (!themeBarProperties.themeBarNewSiteLinkParams) {
+            themeBarProperties.themeBarNewSiteLinkParams = {}
+        }
         const params = JSON.parse(searchParams.get("themeBarNewSiteLinkParams"))
         for (const [key, value] of Object.entries(params)) {
             themeBarProperties.themeBarNewSiteLinkParams[key] = value;
@@ -104,21 +105,17 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
         }
         
         // Update fork button title or visibility
-        if (props.themeBarFork) {
-            if (props.themeBarFork === "false") {
-                uiThemeBarForkLink.style.display = "none";
-            } else {
-                uiThemeBarForkName.textContent = props.themeBarFork;
-            }
+        if (props.themeBarFork === "false" || props.themeBarFork === false) {
+            uiThemeBarForkLink.style.display = "none";
+        } else if (props.themeBarFork) {
+            uiThemeBarForkName.textContent = props.themeBarFork;
         }
         
         // Update create site button title or visibility
-        if (props.themeBarNewSite) {
-            if (props.themeBarNewSite === "false") {
-                uiThemeBarNewSiteLink.style.display = "none";
-            } else {
-                uiThemeBarNewSiteName.textContent = props.themeBarNewSite;
-            }
+        if (props.themeBarNewSite === "false" || props.themeBarNewSite === false) {
+            uiThemeBarNewSiteLink.style.display = "none";
+        } else if (props.themeBarNewSite) {
+            uiThemeBarNewSiteName.textContent = props.themeBarNewSite;
         }
         
         // Update button links and pass through extra query params
@@ -141,8 +138,10 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
         uiThemeBarForkLink.setAttribute("href", newForkLink.toString());
     };
     
-    updateThemeBar(themeBarProperties);
-    sessionStorage.setItem("themeBarProperties", JSON.stringify(themeBarProperties));
+    if (Object.keys(themeBarProperties).length) {
+        updateThemeBar(themeBarProperties);
+        sessionStorage.setItem("themeBarProperties", JSON.stringify(themeBarProperties));
+    }
     
     document.querySelector("#remove-theme-bar").addEventListener("click", function(e) {
         e.preventDefault();
