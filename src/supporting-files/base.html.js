@@ -2,6 +2,7 @@ module.exports = `<!doctype html>
 <html lang="en">
     <head>    
         {% if stackbit_banner.show_banner %}<link rel="stylesheet" type="text/css" href="{{ "assets/css/stackbit-banner.css" | relative_url }}">{% endif %}
+        {% if stackbit_banner.show_banner %}<script type="text/javascript" src="/themeBarConfig.js"></script>{% endif %}
         {% include "html_head.html" %}
         {% if liveReload %}<script type="text/javascript" src={{ "assets/js/live-reload.js" | relative_url }}></script>{% endif %}
     </head>
