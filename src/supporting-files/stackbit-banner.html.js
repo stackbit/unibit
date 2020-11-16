@@ -7,7 +7,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
   <div class="theme-bar-center">
     {% if stackbit_banner.github_url %}
     <a
-      class="theme-bar-button theme-bar-button-outlined theme-bar-fork"
+      class="theme-bar-button theme-bar-button-outlined theme-bar-fork theme-bar-fork-link"
       href="{% if stackbit_banner.github_url %}{{ stackbit_banner.github_url }}{% endif %}"
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
@@ -16,12 +16,12 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
           d="M384 144c0-44.2-35.8-80-80-80s-80 35.8-80 80c0 36.4 24.3 67.1 57.5 76.8-.6 16.1-4.2 28.5-11 36.9-15.4 19.2-49.3 22.4-85.2 25.7-28.2 2.6-57.4 5.4-81.3 16.9v-144c32.5-10.2 56-40.5 56-76.3 0-44.2-35.8-80-80-80S0 35.8 0 80c0 35.8 23.5 66.1 56 76.3v199.3C23.5 365.9 0 396.2 0 432c0 44.2 35.8 80 80 80s80-35.8 80-80c0-34-21.2-63.1-51.2-74.6 3.1-5.2 7.8-9.8 14.9-13.4 16.2-8.2 40.4-10.4 66.1-12.8 42.2-3.9 90-8.4 118.2-43.4 14-17.4 21.1-39.8 21.6-67.9 31.6-10.8 54.4-40.7 54.4-75.9zM80 64c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16zm0 384c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16zm224-320c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16z"
         ></path>
       </svg>
-      <span>Fork</span>
+      <span class="theme-bar-fork-name">Fork</span>
     </a>
     {% endif %}
     {% if stackbit_banner.create_url %}
     <a
-      class="theme-bar-button theme-bar-button-primary theme-bar-new-site"
+      class="theme-bar-button theme-bar-button-primary theme-bar-new-site theme-bar-new-site-link"
       href="{{ stackbit_banner.create_url }}"
     >
       <svg fill="currentColor" viewBox="0 0 131 107">
@@ -33,7 +33,7 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
         </defs>
         <use fill-rule="evenodd" xlink:href="#a" />
       </svg>
-      <span>New Site</span>
+      <span class="theme-bar-new-site-name">New Site</span>
     </a>
     {% endif %}
   </div>
@@ -53,52 +53,101 @@ module.exports = `<div id="theme-bar" class="theme-bar theme-bar-fixed theme-bar
 </div>
 
 <script>
-  var body = document.querySelector("body");
-  var themebar = document.querySelector("#theme-bar");
-  var searchParams = window.location.search
-    .slice(1)
-    .split('&')
-    .reduce((res, cur) => {
-      const [key, value] = cur.split('=');
-      res[key] = value || true;
-      return res;
-    }, {});
-  var hideThemeBar = sessionStorage.getItem('hideThemeBar') || searchParams.themeBarHidden;
-  if (searchParams.themeBarTitle) {
-    themebar.querySelector('.theme-bar-name').textContent = decodeURIComponent(searchParams.themeBarTitle);
-  }
-  if (searchParams.themeBarFork) {
-    var forkButton = themebar.querySelector('.theme-bar-fork');
-    if (searchParams.themeBarFork === 'false') {
-      forkButton.style.display = 'none';
-    } else {
-      forkButton.querySelector('span').textContent = decodeURIComponent(searchParams.themeBarFork);
+    const body = document.querySelector("body");
+    const themebar = document.querySelector("#theme-bar");
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Hide themebar from localstorage
+    const hideThemeBar = sessionStorage.getItem("hideThemeBar") || searchParams.get("themeBarHidden");
+    if (body && !hideThemeBar) {
+        body.classList.add("has-theme-bar");
+        themebar.classList.remove("theme-bar-hidden");
     }
-  }
-  if (searchParams.themeBarNewSite) {
-    var newSiteButton = themebar.querySelector('.theme-bar-new-site');
-    if (searchParams.themeBarNewSite === 'false') {
-      newSiteButton.style.display = 'none';
-    } else {
-      newSiteButton.querySelector('span').textContent = decodeURIComponent(searchParams.themeBarNewSite);
+    
+    let themeBarProperties = {};
+    
+    const demo = searchParams.get("demo");
+    if (demo && themeBarConfig) {
+        if (themeBarConfig[demo]) {
+          themeBarProperties = themeBarConfig[demo];
+        }
+    } else if (sessionStorage.getItem("themeBarProperties")) {
+        themeBarProperties = JSON.parse(sessionStorage.getItem("themeBarProperties"));
     }
-  }
-  if (searchParams.themeBarUserGroup) {
-    var newSiteButton = themebar.querySelector('.theme-bar-new-site');
-    var joiner = newSiteButton.search.length ? '&' : '';
-    newSiteButton.search += joiner + 'userGroup=' + searchParams.themeBarUserGroup;
-  }
-  if (body && !hideThemeBar) {
-    body.classList.add("has-theme-bar");
-    themebar.classList.remove("theme-bar-hidden");
-  }
-  document
-    .querySelector("#remove-theme-bar")
-    .addEventListener("click", function(e) {
-      e.preventDefault();
-      body.classList.remove("has-theme-bar");
-      themebar.classList.add("theme-bar-hidden");
-      sessionStorage.setItem('hideThemeBar', true);
+    
+    // Url params overwrite config values
+    if (searchParams.get("themeBarTitle")) { themeBarProperties.themeBarTitle = searchParams.get("themeBarTitle") }
+    if (searchParams.get("themeBarFork")) { themeBarProperties.themeBarFork = searchParams.get("themeBarFork") }
+    if (searchParams.get("themeBarForkLink")) { themeBarProperties.themeBarForkLink = searchParams.get("themeBarForkLink") }
+    if (searchParams.get("themeBarNewSite")) { themeBarProperties.themeBarNewSite = searchParams.get("themeBarNewSite") }
+    if (searchParams.get("themeBarNewSiteLink")) { themeBarProperties.themeBarNewSiteLink = searchParams.get("themeBarNewSiteLink") }
+    if (searchParams.get("themeBarNewSiteLinkParams")) {
+        // themeBarNewSiteLinkParams url params are merged with config values
+        if (!themeBarProperties.themeBarNewSiteLinkParams) {
+            themeBarProperties.themeBarNewSiteLinkParams = {}
+        }
+        const params = JSON.parse(searchParams.get("themeBarNewSiteLinkParams"))
+        for (const [key, value] of Object.entries(params)) {
+            themeBarProperties.themeBarNewSiteLinkParams[key] = value;
+        }
+    }
+    
+    updateThemeBar = props => {
+        const uiThemeBarTitle = themebar.querySelector(".theme-bar-name");
+        const uiThemeBarForkLink = themebar.querySelector(".theme-bar-fork-link");
+        const uiThemeBarForkName = themebar.querySelector(".theme-bar-fork-name");
+        const uiThemeBarNewSiteLink = themebar.querySelector(".theme-bar-new-site-link");
+        const uiThemeBarNewSiteName = themebar.querySelector(".theme-bar-new-site-name");
+        
+        // Update Title in top left
+        if (props.themeBarTitle) {
+            uiThemeBarTitle.textContent = props.themeBarTitle;
+        }
+        
+        // Update fork button title or visibility
+        if (props.themeBarFork === "false" || props.themeBarFork === false) {
+            uiThemeBarForkLink.style.display = "none";
+        } else if (props.themeBarFork) {
+            uiThemeBarForkName.textContent = props.themeBarFork;
+        }
+        
+        // Update create site button title or visibility
+        if (props.themeBarNewSite === "false" || props.themeBarNewSite === false) {
+            uiThemeBarNewSiteLink.style.display = "none";
+        } else if (props.themeBarNewSite) {
+            uiThemeBarNewSiteName.textContent = props.themeBarNewSite;
+        }
+        
+        // Update button links and pass through extra query params
+        let newForkLink = new URL(uiThemeBarForkLink.href);
+        let newSiteLink = new URL(uiThemeBarNewSiteLink.href);
+        
+        if (props.themeBarNewSiteLink) {
+            newSiteLink = new URL(props.themeBarNewSiteLink);
+        }
+        if (props.themeBarForkLink) {
+            newForkLink = new URL(props.themeBarForkLink);
+        }
+        if (props.themeBarNewSiteLinkParams) {
+            for (const [key, value] of Object.entries( props.themeBarNewSiteLinkParams)) {
+                newSiteLink.searchParams.set(key, value);
+            }
+        }
+        
+        uiThemeBarNewSiteLink.setAttribute("href", newSiteLink.toString());
+        uiThemeBarForkLink.setAttribute("href", newForkLink.toString());
+    };
+    
+    if (Object.keys(themeBarProperties).length) {
+        updateThemeBar(themeBarProperties);
+        sessionStorage.setItem("themeBarProperties", JSON.stringify(themeBarProperties));
+    }
+    
+    document.querySelector("#remove-theme-bar").addEventListener("click", function(e) {
+        e.preventDefault();
+        body.classList.remove("has-theme-bar");
+        themebar.classList.add("theme-bar-hidden");
+        sessionStorage.setItem("hideThemeBar", true);
     });
 </script>
 `;
