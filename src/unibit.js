@@ -322,6 +322,7 @@ module.exports = class Unibit {
         this.env.addFilter('slice_array', filters.sliceArray);
         this.env.addFilter('sort_array', filters.sortArray);
         this.env.addFilter('split', filters.split);
+        this.env.addFilter('join', filters.join);
         this.env.addFilter('markdownify', this.markdownify.bind(this, site));
         this.env.addFilter('append', filters.append);
         this.env.addFilter('replace_regexp', filters.replaceRegexp);

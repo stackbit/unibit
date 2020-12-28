@@ -10,6 +10,7 @@ module.exports = {
     sliceArray,
     sortArray,
     split,
+    join,
     append,
     replaceRegexp,
     startsWith,
@@ -52,6 +53,10 @@ function sortArray(arr, keyPath, order = 'asc') {
 
 function split(str, separator) {
     return _.split(str, separator);
+}
+
+function join(str, separator) {
+    return _.join(str, separator);
 }
 
 function append(str, appendStr) {
