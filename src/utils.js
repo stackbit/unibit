@@ -107,19 +107,19 @@ function parseMarkdownWithFrontMatter(string) {
     let frontMatterTypes = [
         {
             type: 'yaml',
-            startDelimiter: '---\n',
+            startDelimiter: '---',
             endDelimiter: '\n---',
             parse: (string) => yaml.safeLoad(string, {schema: yaml.JSON_SCHEMA})
         },
         {
             type: 'toml',
-            startDelimiter: '+++\n',
+            startDelimiter: '+++',
             endDelimiter: '\n+++',
             parse: (string) => toml.parse(string)
         },
         {
             type: 'json',
-            startDelimiter: '{\n',
+            startDelimiter: '{',
             endDelimiter: '\n}',
             parse: (string) => JSON.parse(string)
         }
