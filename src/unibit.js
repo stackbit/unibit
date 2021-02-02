@@ -244,6 +244,7 @@ module.exports = class Unibit {
         context.paginate = this.paginate.bind(this, context);
         context.link = this.link.bind(this, context.site);
         context.classNames = this.classNames.bind(this);
+        context.attribute = this.attribute.bind(this);
 
         // this.logger.log("context:\n" + JSON.stringify(context, null, 4));
         return context;
@@ -487,6 +488,19 @@ module.exports = class Unibit {
         } else {
             return this.env.filters.safe(`class="${classNames.join(' ')}"`);
         }
+    }
+
+    attribute(name, value, condition) {
+        if (typeof condition === 'undefined') {
+            condition = true;
+        }
+        if (!condition) {
+            return '';
+        }
+        if (value === null) {
+            return this.env.filters.safe(name);
+        }
+        return this.env.filters.safe(`${name}="${value}"`);
     }
 
 }
