@@ -352,9 +352,9 @@ module.exports = class Unibit {
         const urlPathParts = _.split(urlPath, '/');
         return _.filter(context.site.pages, page => {
             // find all pages that have same prefix as folder path, but not the root page of that folder, e.g.: {urlPath}/index.html
-            let pageUrl = _.trim(_.get(page, 'url'), '/');
+            let pageUrl = _.trim(_.get(page, 'url'), path.sep);
             pageUrl = prettyUrl(pageUrl);
-            const pageUrlParts = _.split(pageUrl, '/');
+            const pageUrlParts = _.split(pageUrl, path.sep);
             return pageUrlParts.length > urlPathParts.length && _.isEqual(pageUrlParts.slice(0, urlPathParts.length), urlPathParts);
         });
     }

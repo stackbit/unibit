@@ -3,7 +3,7 @@ const path = require('path');
 const _ = require('lodash');
 const yaml = require('js-yaml');
 const toml = require('@iarna/toml');
-
+const { EOL } = require('os');
 
 module.exports = {
     forEachPromise,
@@ -107,20 +107,20 @@ function parseMarkdownWithFrontMatter(string) {
     let frontMatterTypes = [
         {
             type: 'yaml',
-            startDelimiter: '---',
-            endDelimiter: '\n---',
+            startDelimiter: `---${EOL}`,
+            endDelimiter: `${EOL}---`,
             parse: (string) => yaml.safeLoad(string, {schema: yaml.JSON_SCHEMA})
         },
         {
             type: 'toml',
-            startDelimiter: '+++',
-            endDelimiter: '\n+++',
+            startDelimiter: `+++${EOL}`,
+            endDelimiter: `${EOL}+++`,
             parse: (string) => toml.parse(string)
         },
         {
             type: 'json',
-            startDelimiter: '{',
-            endDelimiter: '\n}',
+            startDelimiter: `{${EOL}`,
+            endDelimiter: `${EOL}}`,
             parse: (string) => JSON.parse(string)
         }
     ];
