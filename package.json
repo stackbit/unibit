@@ -1,10 +1,10 @@
 {
   "name": "@stackbit/unibit",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "description": "Stackbit's static site generator powered by Nunjucks templating language",
   "main": "src/unibit.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "version-patch": "npm version patch -m \"bumped version to v%s\"",
     "version-minor": "npm version minor -m \"bumped version to v%s\""
   },
